@@ -1,0 +1,11 @@
+flask
+requests
+cryptography
+playsound
+qrcode[pil]
+pyzbar
+Pillow
+matplotlib
+colorama
+vosk
+pydub

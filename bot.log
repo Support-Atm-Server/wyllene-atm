@@ -1,0 +1,82 @@
+nohup: ignoring input
+🤖 Enhanced Wyllene ATM bot is running...
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 64, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780075463, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 66, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780075661, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 68, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780076106, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 71, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780076129, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 78, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780076976, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 82, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780076983, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: blue
+Sent: {'ok': True, 'result': {'message_id': 85, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780076990, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 91, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077343, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 93, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077349, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 98, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077359, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 102, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077366, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 110, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077393, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 114, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077402, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 118, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077410, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: blue
+Sent: {'ok': True, 'result': {'message_id': 122, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077416, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 132, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077643, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 137, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780077649, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 147, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078848, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 153, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078862, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 155, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078866, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 163, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078876, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: blue
+Sent: {'ok': True, 'result': {'message_id': 172, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078889, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 176, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780078997, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 184, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079011, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 189, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079018, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 196, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079062, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 207, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079081, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: blue
+Sent: {'ok': True, 'result': {'message_id': 215, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079092, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 235, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780079859, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 251, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080319, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 256, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080325, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 264, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080328, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 282, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080488, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 286, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080501, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 290, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080509, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: blue
+Sent: {'ok': True, 'result': {'message_id': 293, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080516, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: wyllene
+Sent: {'ok': True, 'result': {'message_id': 303, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080925, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: 1234
+Sent: {'ok': True, 'result': {'message_id': 305, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780080931, 'text': 'Unknown command. Try /start', 'entities': [{'offset': 21, 'length': 6, 'type': 'bot_command'}]}}
+Received: /start
+Sent: {'ok': True, 'result': {'message_id': 311, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780081099, 'text': 'Welcome to Wyllene ATM!\nPlease /login to access your account.', 'entities': [{'offset': 31, 'length': 6, 'type': 'bot_command'}], 'reply_markup': {'inline_keyboard': [[{'text': '🔑 Login', 'callback_data': '/login'}]]}}}
+Received: /login
+Sent: {'ok': True, 'result': {'message_id': 317, 'from': {'id': 8980273422, 'is_bot': True, 'first_name': 'WYLLENE_atm_bot', 'username': 'wylleneATM_bot'}, 'chat': {'id': 6819329002, 'first_name': '🎀🎀🎀', 'type': 'private'}, 'date': 1780081122, 'text': 'Usage: /login <username> <pin> <security_answer>', 'entities': [{'offset': 7, 'length': 6, 'type': 'bot_command'}]}}

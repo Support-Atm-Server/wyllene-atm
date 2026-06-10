@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.db
+*.enc
+*.json
+backups/
+sounds/
+*.backup
+*.bak
+*.bak2
+*.bak3

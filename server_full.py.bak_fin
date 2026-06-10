@@ -1,0 +1,774 @@
+import json, socket, threading, time, sqlite3, os
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, render_template_string
+
+# ---------- Configuration ----------
+HOST = '0.0.0.0'
+PORT = 9999
+DB_FILE = 'atm.db'
+WEB_PORT = int(os.environ.get("PORT", 5000))
+INTEREST_RATE = 0.02   # 2% monthly
+# ---------- Database setup ----------
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                    username TEXT PRIMARY KEY,
+                    pin TEXT NOT NULL,
+                    security_q TEXT DEFAULT 'mother maiden name',
+                    security_a TEXT DEFAULT '',
+                    balance REAL DEFAULT 0.0)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT,
+                    type TEXT,
+                    amount REAL,
+                    timestamp TEXT,
+                    FOREIGN KEY(username) REFERENCES users(username))''')
+    # Default user if none exists
+    c.execute("SELECT COUNT(*) FROM users")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO users (username, pin, security_a, balance) VALUES (?,?,?,?)",
+                  ("wyllene", "1234", "blue", 1000.0))
+    conn.commit()
+    conn.close()
+
+def load_users():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    users = {}
+    for row in conn.execute("SELECT * FROM users"):
+        users[row['username']] = {
+            'pin': row['pin'],
+            'security_q': row['security_q'],
+            'security_a': row['security_a'],
+            'balance': row['balance']
+        }
+    conn.close()
+    return users
+
+def save_user(username, data):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE users SET pin=?, security_q=?, security_a=?, balance=? WHERE username=?",
+              (data['pin'], data.get('security_q',''), data.get('security_a',''), data['balance'], username))
+    conn.commit()
+    conn.close()
+
+def record_transaction(username, trans_type, amount):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO transactions (username, type, amount, timestamp) VALUES (?,?,?,?)",
+              (username, trans_type, amount, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    # Keep only last 50 per user
+    c.execute("DELETE FROM transactions WHERE id NOT IN (SELECT id FROM transactions WHERE username=? ORDER BY id DESC LIMIT 50)", (username,))
+    conn.commit()
+    conn.close()
+
+def add_monthly_interest():
+    while True:
+        now = datetime.now()
+        # Run on 1st of each month at 03:00
+        if now.day == 1 and now.hour == 3 and now.minute < 1:
+            conn = sqlite3.connect(DB_FILE)
+            c = conn.cursor()
+            c.execute("UPDATE users SET balance = balance * (1 + ?)", (INTEREST_RATE,))
+            conn.commit()
+            conn.close()
+            print(f"[Interest] Added {INTEREST_RATE*100}% interest to all accounts.")
+        time.sleep(60)  # check every minute
+
+# ---------- Flask Web Dashboard ----------
+web_app = Flask(__name__)
+
+@web_app.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "Wyllene ATM",
+        "short_name": "Wyllene",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#1a1a2e",
+        "theme_color": "#16213e",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
+    })
+
+
+@web_app.route('/sw.js')
+def service_worker():
+    return web_app.send_static_file('sw.js')
+
+@web_app.route('/')
+def dashboard():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    users = conn.execute("SELECT username, balance FROM users").fetchall()
+    total = sum(u['balance'] for u in users)
+    html = '''<h1>Wyllene ATM Dashboard</h1>
+    <table border="1"><tr><th>Username</th><th>Balance</th></tr>
+    {% for u in users %}<tr><td>{{u['username']}}</td><td>${{"{:.2f}".format(u['balance'])}}</td></tr>{% endfor %}
+    <tr><td><b>Total</b></td><td><b>${{"{:.2f}".format(total)}}</b></td></tr></table>'''
+    return render_template_string(html, users=users, total=total)
+
+def start_web():
+    web_app.run(host='0.0.0.0', port=WEB_PORT, debug=False, use_reloader=False)
+
+# ---------- ATM Server ----------
+
+# ---------- User Registration ----------
+def register_user(username, pin, security_q, security_a, initial_balance=0.0):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO users (username, pin, security_q, security_a, balance) VALUES (?,?,?,?,?)",
+                  (username, pin, security_q, security_a, initial_balance))
+        conn.commit()
+        return {"status": "ok", "message": "User registered."}
+    except sqlite3.IntegrityError:
+        return {"status": "error", "message": "Username already exists."}
+    finally:
+        conn.close()
+
+# ---------- Money Transfer ----------
+def transfer_funds(sender, recipient, amount):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        # Check sender balance
+        c.execute("SELECT balance FROM users WHERE username=?", (sender,))
+        row = c.fetchone()
+        if not row:
+            return {"status": "error", "message": "Sender not found."}
+        sender_balance = row[0]
+        if amount <= 0:
+            return {"status": "error", "message": "Amount must be positive."}
+        if amount > sender_balance:
+            return {"status": "error", "message": "Insufficient funds."}
+        # Check recipient exists
+        c.execute("SELECT username FROM users WHERE username=?", (recipient,))
+        if not c.fetchone():
+            return {"status": "error", "message": "Recipient not found."}
+        # Perform transfer
+        c.execute("UPDATE users SET balance = balance - ? WHERE username=?", (amount, sender))
+        c.execute("UPDATE users SET balance = balance + ? WHERE username=?", (amount, recipient))
+        # Record transactions
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("INSERT INTO transactions (username, type, amount, timestamp) VALUES (?,?,?,?)",
+                  (sender, "TRANSFER_OUT", amount, now))
+        c.execute("INSERT INTO transactions (username, type, amount, timestamp) VALUES (?,?,?,?)",
+                  (recipient, "TRANSFER_IN", amount, now))
+        conn.commit()
+        return {"status": "ok", "message": f"Transferred ${amount:.2f} to {recipient}."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    finally:
+        conn.close()
+
+
+# ---------- Backup & Restore ----------
+import shutil, zipfile
+
+BACKUP_DIR = "backups"
+
+def backup_database():
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"atm_backup_{timestamp}.zip"
+    zip_path = os.path.join(BACKUP_DIR, zip_filename)
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.write(DB_FILE, os.path.basename(DB_FILE))
+    return {"status": "ok", "file": zip_filename}
+
+def restore_database(zip_filename):
+    zip_path = os.path.join(BACKUP_DIR, zip_filename)
+    if not os.path.exists(zip_path):
+        return {"status": "error", "message": "Backup file not found."}
+    # Close current connection before restoring
+    conn = sqlite3.connect(DB_FILE)
+    conn.close()
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        zf.extract(os.path.basename(DB_FILE), os.path.dirname(DB_FILE) or ".")
+    return {"status": "ok", "message": "Database restored."}
+
+
+import secrets, time
+
+# ---------- OTP Store ----------
+otp_store = {}
+
+def generate_otp(username):
+    code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+    temp_token = secrets.token_hex(16)
+    otp_store[username] = {"code": code, "expires": time.time() + 300, "temp_token": temp_token}
+    return code, temp_token
+
+def verify_otp(username, temp_token, code):
+    entry = otp_store.get(username)
+    if not entry:
+        return False
+    if entry["temp_token"] != temp_token:
+        return False
+    if time.time() > entry["expires"]:
+        del otp_store[username]
+        return False
+    if entry["code"] != code:
+        return False
+    del otp_store[username]
+    return True
+
+
+# ---------- Email Configuration ----------
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "your_email@gmail.com")    # CHANGE THIS
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")     # CHANGE THIS
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+
+def send_email(to_email, subject, body):
+    if EMAIL_SENDER == "your_email@gmail.com":
+        print("[Email] Config not set, skipping.")
+        return False
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls(context=context)
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_SENDER, to_email, msg.as_string())
+        print(f"[Email] Sent to {to_email}")
+        return True
+    except Exception as e:
+        print(f"[Email] Error: {e}")
+        return False
+
+
+# ---------- AI Assistant ----------
+try:
+    import subprocess, shlex
+    def query_ollama(prompt):
+        """Return response from Ollama or None if unavailable."""
+        try:
+            # Use ollama CLI with stream=false
+            cmd = f"ollama run llama3.2 '{prompt}'"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=15)
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except:
+            pass
+        return None
+except:
+    query_ollama = None
+
+def simple_ai_parse(text, username, accounts):
+    """Basic natural language understanding for banking commands."""
+    text = text.lower().strip()
+    # Balance inquiry
+    if "balance" in text or "how much" in text:
+        if username in accounts:
+            return f"Your balance is ${accounts[username]['balance']:.2f}"
+        else:
+            return "You are not logged in."
+    # Deposit
+    if "deposit" in text or "add" in text:
+        words = text.split()
+        for i, w in enumerate(words):
+            if w.startswith("$") and i+1 < len(words) and w[1:].replace('.','',1).isdigit():
+                amt = float(w[1:])
+                return f"To deposit ${amt:.2f}, use the deposit function. (Command: DEPOSIT {amt})"
+        # Try to find a number after deposit
+        import re
+        nums = re.findall(r"\d+\.?\d*", text)
+        if nums:
+            return f"Did you mean to deposit ${nums[0]}? (Command: DEPOSIT {nums[0]})"
+    # Withdraw
+    if "withdraw" in text or "take out" in text:
+        nums = re.findall(r"\d+\.?\d*", text)
+        if nums:
+            return f"To withdraw ${nums[0]}, use the withdraw function. (Command: WITHDRAW {nums[0]})"
+    # Transfer
+    if "transfer" in text or "send" in text:
+        # Look for "to <username>"
+        to_match = re.search(r"(?:to|for) (\w+)", text)
+        nums = re.findall(r"\d+\.?\d*", text)
+        if to_match and nums:
+            target = to_match.group(1)
+            amt = nums[0]
+            return f"To transfer ${amt} to {target}, use the transfer function. (Command: TRANSFER {target} {amt})"
+    # History
+    if "history" in text or "transactions" in text or "statement" in text:
+        return "Here are your last transactions: (use the history function to see them)"
+    # Help
+    return "I can help with: balance, deposit, withdraw, transfer, history. Just ask naturally."
+
+def ai_assist(username, message):
+    """Process an AI message and return a response string.
+    The message may contain natural language. We'll try to interpret it and return a reply.
+    If it's a command, we'll also return the command for execution.
+    Returns a dict: {"reply": "...", "command": optional_command_dict}
+    """
+    # First try Ollama for a natural response
+    if query_ollama:
+        prompt = f"You are a helpful bank assistant for Wyllene ATM. The user {username} says: {message}. Respond concisely and, if it's a banking command, also output a JSON command like {{"cmd":"DEPOSIT","amount":50}} on a separate line."
+        resp = query_ollama(prompt)
+        if resp:
+            # Try to extract a command from the response
+            lines = resp.split('
+')
+            reply_lines = []
+            command = None
+            for line in lines:
+                if line.strip().startswith('{') and line.strip().endswith('}'):
+                    try:
+                        cmd = json.loads(line.strip())
+                        if "cmd" in cmd:
+                            command = cmd
+                            continue
+                    except:
+                        pass
+                reply_lines.append(line)
+            return {"reply": "
+".join(reply_lines), "command": command}
+    
+    # Fallback to simple rule engine
+    reply = simple_ai_parse(message, username, load_users())
+    return {"reply": reply, "command": None}
+
+
+def upgrade_schema():
+    conn = get_connection()
+    c = conn.cursor()
+    # Cardless withdrawal codes
+    c.execute("CREATE TABLE IF NOT EXISTS cardless_codes (code TEXT PRIMARY KEY, username TEXT, amount REAL, expires TEXT, used INTEGER DEFAULT 0)")
+    # Billers
+    c.execute("CREATE TABLE IF NOT EXISTS billers (name TEXT PRIMARY KEY, min_amount REAL DEFAULT 1.0)")
+    c.execute("INSERT INTO billers (name) VALUES ('Electricity'), ('Water'), ('Internet') ON CONFLICT DO NOTHING")
+    # Savings goals
+    c.execute("CREATE TABLE IF NOT EXISTS savings_goals (username TEXT, goal_name TEXT, target REAL, current REAL DEFAULT 0.0, PRIMARY KEY (username, goal_name))")
+    conn.commit()
+    conn.close()
+
+def handle_client(conn, addr):
+    print(f"[+] Connection from {addr}")
+    authenticated = False
+    username = None
+    try:
+        while True:
+            data = conn.recv(4096)
+            if not data: break
+            try:
+                req = json.loads(data.decode())
+            except:
+                conn.sendall(json.dumps({"status":"error","message":"Invalid JSON"}).encode())
+                continue
+            cmd = req.get("cmd")
+            resp = {"status":"error","message":"Unknown command"}
+
+            if cmd == "LOGIN":
+                uname = req.get("username")
+                pin = req.get("pin")
+                users = load_users()
+                if uname == "admin" and pin == "admin123":
+                    authenticated = True
+                    username = "admin"
+                    resp = {"status":"ok","admin":True}
+                elif uname in users and users[uname]['pin'] == pin:
+                    sec_a = req.get("security_answer","").lower()
+                    if users[uname].get('security_a','').lower() == sec_a:
+                        # Check 2FA
+                        if users[uname].get('two_factor_enabled') and users[uname].get('chat_id'):
+                            code, temp_token = generate_otp(uname)
+                            resp = {"status":"otp_required","temp_token":temp_token,"chat_id":users[uname]['chat_id']}
+                        else:
+                            authenticated = True
+                            username = uname
+                            resp = {"status":"ok","balance":users[uname]['balance']}
+                    else:
+                        resp = {"status":"error","message":"Incorrect security answer."}
+                else:
+                    resp = {"status":"error","message":"Invalid credentials"}
+
+            elif not authenticated:
+                resp = {"status":"error","message":"Not authenticated"}
+
+            elif cmd == "GET_SECURITY_QUESTION":
+                uname = req.get("username")
+                users = load_users()
+                if uname in users:
+                    resp = {"status":"ok","question":users[uname].get("security_q","")}
+                else:
+                    resp = {"status":"error"}
+
+            elif cmd == "BALANCE":
+                users = load_users()
+                resp = {"status":"ok","balance":users[username]['balance']}
+
+            elif cmd == "DEPOSIT":
+                amount = float(req.get("amount",0))
+                if amount <= 0:
+                    resp = {"status":"error","message":"Invalid amount"}
+                else:
+                    users = load_users()
+                    users[username]['balance'] += amount
+                    save_user(username, users[username])
+                    record_transaction(username, "DEPOSIT", amount)
+                    resp = {"status":"ok","new_balance":users[username]['balance']}
+                    # Send email receipt if user has email set
+                    user_email = users[username].get("email")
+                    if user_email:
+                        send_email(user_email, "Deposit Receipt", f"Hi {username},
+
+You deposited ${amount:.2f}. New balance: ${users[username]['balance']:.2f}.
+
+- Wyllene ATM")
+
+            elif cmd == "WITHDRAW":
+                amount = float(req.get("amount",0))
+                users = load_users()
+                if amount <= 0 or amount > users[username]['balance']:
+                    resp = {"status":"error","message":"Insufficient funds"}
+                else:
+                    users[username]['balance'] -= amount
+                    save_user(username, users[username])
+                    record_transaction(username, "WITHDRAW", amount)
+                    resp = {"status":"ok","new_balance":users[username]['balance']}
+                    user_email = users[username].get("email")
+                    if user_email:
+                        send_email(user_email, "Withdrawal Receipt", f"Hi {username},
+
+You withdrew ${amount:.2f}. New balance: ${users[username]['balance']:.2f}.
+
+- Wyllene ATM")
+
+            elif cmd == "HISTORY":
+                conn = sqlite3.connect(DB_FILE)
+                rows = conn.execute("SELECT type, amount, timestamp FROM transactions WHERE username=? ORDER BY id DESC LIMIT 10", (username,)).fetchall()
+                history = [{"type":r[0], "amount":r[1], "time":r[2]} for r in rows]
+                conn.close()
+                resp = {"status":"ok","history":history}
+
+            elif cmd == "CHANGE_PIN":
+                old = req.get("old_pin")
+                new = req.get("new_pin")
+                users = load_users()
+                if users[username]['pin'] != old:
+                    resp = {"status":"error","message":"Incorrect current PIN"}
+                elif not (new.isdigit() and len(new)==4):
+                    resp = {"status":"error","message":"New PIN must be 4 digits"}
+                else:
+                    users[username]['pin'] = new
+                    save_user(username, users[username])
+                    resp = {"status":"ok"}
+
+            elif cmd == "ADMIN_VIEW_ALL":
+                if username != "admin":
+                    resp = {"status":"error","message":"Admin only"}
+                else:
+                    users = load_users()
+                    summary = {u: {"balance":data["balance"]} for u,data in users.items()}
+                    total = sum(d['balance'] for d in users.values())
+                    resp = {"status":"ok","accounts":summary,"total":total}
+
+
+            elif cmd == "REGISTER":
+                uname = req.get("username")
+                pin = req.get("pin")
+                sec_q = req.get("security_q", "")
+                sec_a = req.get("security_a", "")
+                resp = register_user(uname, pin, sec_q, sec_a)
+            elif cmd == "SET_CHAT_ID":
+                if not authenticated:
+                    resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    chat_id = req.get("chat_id")
+                    if chat_id:
+                        users = load_users()
+                        users[username]['chat_id'] = chat_id
+                        save_user(username, users[username])
+                        resp = {"status":"ok"}
+                    else:
+                        resp = {"status":"error"}
+            
+            elif cmd == "QR_PAY":
+                if not authenticated:
+                    resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    try:
+                        data = json.loads(req.get("qr_data", "{}"))
+                        recipient = data.get("recipient")
+                        amount = float(data.get("amount", 0))
+                        if recipient == username:
+                            resp = {"status":"error","message":"Cannot pay yourself."}
+                        else:
+                            resp = transfer_funds(username, recipient, amount)
+                    except Exception as e:
+                        resp = {"status":"error","message":str(e)}
+
+            
+            elif cmd == "CARDLESS_GENERATE":
+                if not authenticated: resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    try:
+                        amount = float(req.get("amount",0))
+                        if amount <= 0 or amount > users[username]['balance']:
+                            resp = {"status":"error","message":"Invalid amount or insufficient funds"}
+                        else:
+                            import secrets, string
+                            code = ''.join(secrets.choice(string.digits) for _ in range(8))
+                            expires = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+                            conn = get_connection()
+                            c = conn.cursor()
+                            c.execute("INSERT INTO cardless_codes (code, username, amount, expires) VALUES (%s,%s,%s,%s)",
+                                      (code, username, amount, expires))
+                            # Immediately deduct? No, only when used. So generate code, no deduction yet.
+                            conn.commit()
+                            conn.close()
+                            resp = {"status":"ok","code":code,"amount":amount,"expires":expires}
+                    except Exception as e:
+                        resp = {"status":"error","message":str(e)}
+            elif cmd == "CARDLESS_REDEEM":
+                # Anyone can redeem (even not logged in? We'll require login for simplicity)
+                if not authenticated: resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    code = req.get("code","")
+                    conn = get_connection()
+                    c = conn.cursor()
+                    c.execute("SELECT * FROM cardless_codes WHERE code=%s AND used=0 AND expires > %s",
+                              (code, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                    row = c.fetchone()
+                    if not row:
+                        conn.close()
+                        resp = {"status":"error","message":"Invalid or expired code"}
+                    else:
+                        code_owner = row[1]
+                        amount = row[2]
+                        # Transfer from code_owner to current user (username)
+                        if code_owner == username:
+                            conn.close()
+                            resp = {"status":"error","message":"Cannot redeem your own code"}
+                        else:
+                            resp_transfer = transfer_funds(code_owner, username, amount)
+                            if resp_transfer["status"] == "ok":
+                                c.execute("UPDATE cardless_codes SET used=1 WHERE code=%s", (code,))
+                                conn.commit()
+                                resp = {"status":"ok","message":f"Redeemed ${amount:.2f} from {code_owner}"}
+                            else:
+                                resp = resp_transfer
+                            conn.close()
+            elif cmd == "BILL_PAY":
+                if not authenticated: resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    biller = req.get("biller","").strip().title()
+                    try:
+                        amount = float(req.get("amount",0))
+                    except:
+                        resp = {"status":"error","message":"Invalid amount"}
+                        break
+                    if amount <= 0:
+                        resp = {"status":"error","message":"Amount must be positive"}
+                    else:
+                        # Check biller exists
+                        conn = get_connection()
+                        c = conn.cursor()
+                        c.execute("SELECT * FROM billers WHERE name=%s", (biller,))
+                        if not c.fetchone():
+                            conn.close()
+                            resp = {"status":"error","message":"Unknown biller"}
+                        else:
+                            # Check balance
+                            users = load_users()
+                            if amount > users[username]['balance']:
+                                conn.close()
+                                resp = {"status":"error","message":"Insufficient funds"}
+                            else:
+                                users[username]['balance'] -= amount
+                                save_user(username, users[username])
+                                record_transaction(username, "BILL_PAY", amount)
+                                resp = {"status":"ok","message":f"Paid ${amount:.2f} to {biller}","new_balance":users[username]['balance']}
+                        conn.close()
+            elif cmd == "SAVINGS_GOAL_CREATE":
+                if not authenticated: resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    goal_name = req.get("goal_name","").strip()
+                    target = float(req.get("target",0))
+                    if not goal_name or target <= 0:
+                        resp = {"status":"error","message":"Invalid goal name or target"}
+                    else:
+                        conn = get_connection()
+                        c = conn.cursor()
+                        try:
+                            c.execute("INSERT INTO savings_goals (username, goal_name, target, current) VALUES (%s,%s,%s,0.0)",
+                                      (username, goal_name, target))
+                            conn.commit()
+                            resp = {"status":"ok","message":"Goal created"}
+                        except:
+                            conn.rollback()
+                            resp = {"status":"error","message":"Goal already exists or error"}
+                        finally:
+                            conn.close()
+            elif cmd == "SAVINGS_GOAL_CONTRIBUTE":
+                if not authenticated: resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    goal_name = req.get("goal_name","").strip()
+                    amount = float(req.get("amount",0))
+                    if amount <= 0:
+                        resp = {"status":"error","message":"Invalid amount"}
+                    else:
+                        users = load_users()
+                        if amount > users[username]['balance']:
+                            resp = {"status":"error","message":"Insufficient funds"}
+                        else:
+                            conn = get_connection()
+                            c = conn.cursor()
+                            c.execute("SELECT * FROM savings_goals WHERE username=%s AND goal_name=%s",
+                                      (username, goal_name))
+                            goal = c.fetchone()
+                            if not goal:
+                                conn.close()
+                                resp = {"status":"error","message":"Goal not found"}
+                            else:
+                                # Deduct from balance and add to goal
+                                users[username]['balance'] -= amount
+                                save_user(username, users[username])
+                                c.execute("UPDATE savings_goals SET current = current + %s WHERE username=%s AND goal_name=%s",
+                                          (amount, username, goal_name))
+                                conn.commit()
+                                conn.close()
+                                record_transaction(username, "GOAL_CONTRIB", amount)
+                                resp = {"status":"ok","message":f"Added ${amount:.2f} to '{goal_name}'","new_balance":users[username]['balance']}
+
+            elif cmd == "TRANSFER":
+                if not authenticated:
+                    resp = {"status": "error", "message": "Not authenticated"}
+                else:
+                    target = req.get("recipient")
+                    amt = float(req.get("amount", 0))
+                    resp = transfer_funds(username, target, amt)
+
+            elif cmd == "BACKUP":
+                if username != "admin": resp = {"status":"error","message":"Admin only"}
+                else: resp = backup_database()
+            elif cmd == "RESTORE":
+                if username != "admin": resp = {"status":"error","message":"Admin only"}
+                else:
+                    file = req.get("file","")
+                    resp = restore_database(file)
+            elif cmd == "VERIFY_OTP":
+                uname = req.get("username")
+                token = req.get("temp_token")
+                code = req.get("otp")
+                if verify_otp(uname, token, code):
+                    authenticated = True
+                    username = uname
+                    users = load_users()
+                    resp = {"status":"ok","balance":users[uname]['balance']}
+                else:
+                    resp = {"status":"error","message":"Invalid or expired OTP."}
+            elif cmd == "AI_ASSIST":
+                if not authenticated:
+                    resp = {"status":"error","message":"Not authenticated"}
+                else:
+                    msg = req.get("message","")
+                    result = ai_assist(username, msg)
+                    reply_text = result["reply"]
+                    command = result.get("command")
+                    # If a command was extracted, execute it
+                    if command:
+                        # Simulate handling that command internally
+                        if command["cmd"] == "BALANCE":
+                            users = load_users()
+                            bal = users[username]["balance"]
+                            reply_text += f"\nYour balance: ${bal:.2f}"
+                        elif command["cmd"] == "DEPOSIT":
+                            amt = float(command.get("amount", 0))
+                            users = load_users()
+                            users[username]["balance"] += amt
+                            save_user(username, users[username])
+                            record_transaction(username, "DEPOSIT", amt)
+                            reply_text += f"\nDeposited ${amt:.2f}. New balance: ${users[username]['balance']:.2f}"
+                        elif command["cmd"] == "WITHDRAW":
+                            amt = float(command.get("amount", 0))
+                            users = load_users()
+                            if amt > users[username]["balance"]:
+                                reply_text += "\nInsufficient funds."
+                            else:
+                                users[username]["balance"] -= amt
+                                save_user(username, users[username])
+                                record_transaction(username, "WITHDRAW", amt)
+                                reply_text += f"\nWithdrew ${amt:.2f}. New balance: ${users[username]['balance']:.2f}"
+                        elif command["cmd"] == "TRANSFER":
+                            target = command.get("recipient")
+                            amt = float(command.get("amount", 0))
+                            resp = transfer_funds(username, target, amt)
+                            if resp["status"] == "ok":
+                                reply_text += f"\nTransferred ${amt:.2f} to {target}."
+                            else:
+                                reply_text += f"\nTransfer failed: {resp['message']}"
+                        elif command["cmd"] == "HISTORY":
+                            conn = sqlite3.connect(DB_FILE)
+                            rows = conn.execute("SELECT type, amount, timestamp FROM transactions WHERE username=? ORDER BY id DESC LIMIT 5", (username,)).fetchall()
+                            if rows:
+                                hist = [f"{r[2]} {r[0]} ${r[1]:.2f}" for r in rows]
+                                reply_text += "\n" + "\n".join(hist)
+                            else:
+                                reply_text += "\nNo transactions yet."
+                            conn.close()
+                    resp = {"status":"ok","reply":reply_text}
+            elif cmd == "ADMIN_RESET_PIN":
+                if username != "admin": resp = {"status":"error","message":"Admin only"}
+                else:
+                    target = req.get("target_user")
+                    new_pin = req.get("new_pin")
+                    users = load_users()
+                    if target not in users: resp = {"status":"error","message":"User not found"}
+                    elif not (new_pin.isdigit() and len(new_pin)==4): resp = {"status":"error","message":"PIN must be 4 digits"}
+                    else:
+                        users[target]['pin'] = new_pin
+                        save_user(target, users[target])
+                        resp = {"status":"ok"}
+
+            elif cmd == "SET_SECURITY":
+                new_q = req.get("question","")
+                new_a = req.get("answer","")
+                users = load_users()
+                users[username]['security_q'] = new_q
+                users[username]['security_a'] = new_a.lower()
+                save_user(username, users[username])
+                resp = {"status":"ok"}
+
+            conn.sendall(json.dumps(resp).encode())
+    except Exception as e:
+        print(f"[!] Error {addr}: {e}")
+    finally:
+        conn.close()
+        print(f"[-] Disconnected {addr}")
+
+def start_server():
+    init_db()
+    # Start interest thread
+    interest_thread = threading.Thread(target=add_monthly_interest, daemon=True)
+    interest_thread.start()
+    # Start web dashboard in a thread
+    web_thread = threading.Thread(target=start_web, daemon=True)
+    web_thread.start()
+    # Start main socket server
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind((HOST, PORT))
+    server.listen(5)
+    print(f"🏦 Server + Web + Interest running on port {PORT} (web: {WEB_PORT})")
+    while True:
+        conn, addr = server.accept()
+        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
+
+if __name__ == "__main__":
+    start_server()

@@ -1,0 +1,511 @@
+import requests, json, socket, time
+
+TOKEN = os.environ.get("BOT_TOKEN", "")
+
+import qrcode, io, os, tempfile, base64
+from PIL import Image
+import requests as req_lib
+
+def generate_qr_image(recipient, amount):
+    data = json.dumps({"recipient": recipient, "amount": amount})
+    img = qrcode.make(data)
+    bio = io.BytesIO()
+    img.save(bio, "PNG")
+    bio.seek(0)
+    return bio
+
+def decode_qr_from_photo(file_path):
+    from pyzbar.pyzbar import decode
+    img = Image.open(file_path)
+    decoded = decode(img)
+    if decoded:
+        return decoded[0].data.decode()
+    return None
+HOST = os.environ.get("SERVER_HOST", "localhost")
+PORT = 9999
+
+# ---------- Server communication ----------
+def server(cmd):
+    try:
+        s = socket.socket()
+        s.settimeout(5)
+        s.connect((HOST, PORT))
+        s.sendall(json.dumps(cmd).encode())
+        resp = json.loads(s.recv(4096).decode())
+        s.close()
+        return resp
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# ---------- Keyboards ----------
+def main_menu():
+    return {"inline_keyboard": [
+        [{"text": "💰 Balance", "callback_data": "balance"},
+         {"text": "💸 Deposit", "callback_data": "deposit"}],
+        [{"text": "🏧 Withdraw", "callback_data": "withdraw"},
+         {"text": "📋 History", "callback_data": "history"}],
+        [{"text": "💸 Transfer", "callback_data": "transfer"}],
+        [{"text": "🔐 Change PIN", "callback_data": "changepin"}],
+        [{"text": "❌ Logout", "callback_data": "logout"}]
+    ]}
+
+def admin_menu():
+    return {"inline_keyboard": [
+        [{"text":"📊 All Accounts","callback_data":"admin_view"},
+         {"text":"🔧 Reset PIN","callback_data":"admin_reset"}],
+        [{"text":"💾 Backup DB","callback_data":"backup"},
+         {"text":"📂 Restore DB","callback_data":"restore"}],
+        [{"text":"❌ Logout","callback_data":"logout"}]
+    ]}
+
+def login_btn():
+    return {"inline_keyboard": [
+        [{"text": "🔑 Login", "callback_data": "login_start"}],
+        [{"text": "📝 Register", "callback_data": "register_start"}]
+    ]}
+
+# ---------- State ----------
+state = {}
+user = {}
+
+def send(chat_id, text, markup=None):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    if markup:
+        payload["reply_markup"] = json.dumps(markup)
+    r = requests.post(url, json=payload)
+    print("Sent:", r.json())
+
+def answer_cb(cb_id, text=""):
+    requests.post(f"https://api.telegram.org/bot{TOKEN}/answerCallbackQuery",
+                  json={"callback_query_id": cb_id, "text": text})
+
+# ---------- Text handler ----------
+def process_text(chat_id, text):
+    s = state.get(chat_id)
+    # Registration flow
+    if s == "REG_USER":
+        user[chat_id] = {"reg_username": text.strip()}
+        state[chat_id] = "REG_PIN"
+        send(chat_id, "Choose a 4-digit PIN:")
+        return
+    if s == "REG_PIN":
+        user[chat_id]["reg_pin"] = text.strip()
+        state[chat_id] = "REG_SEC_Q"
+        send(chat_id, "Enter a security question:")
+        return
+    if s == "REG_SEC_Q":
+        user[chat_id]["reg_sec_q"] = text.strip()
+        state[chat_id] = "REG_SEC_A"
+        send(chat_id, "Enter the answer:")
+        return
+    if s == "REG_SEC_A":
+        u = user[chat_id]["reg_username"]
+        p = user[chat_id]["reg_pin"]
+        q = user[chat_id]["reg_sec_q"]
+        a = text.strip()
+        resp = server({"cmd": "REGISTER", "username": u, "pin": p, "security_q": q, "security_a": a})
+        send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", login_btn())
+        state.pop(chat_id, None); user.pop(chat_id, None)
+        return
+    # Transfer flow
+    if s == "TRANSFER_RECIPIENT":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["transfer_recipient"] = text.strip()
+        state[chat_id] = "TRANSFER_AMOUNT"
+        send(chat_id, "Enter amount to transfer:")
+        return
+    if s == "TRANSFER_AMOUNT":
+        try:
+            amt = float(text)
+            recipient = user[chat_id].get("transfer_recipient", "")
+            resp = server({"cmd": "TRANSFER", "recipient": recipient, "amount": amt})
+            send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", main_menu())
+        except:
+            send(chat_id, "Invalid amount.", main_menu())
+        state.pop(chat_id, None)
+        return
+    # Login flow
+    if s == "LOGIN_USER":
+        user[chat_id] = {"username": text.strip()}
+        state[chat_id] = "LOGIN_PIN"
+        send(chat_id, "Enter your PIN:")
+        return
+    if s == "LOGIN_PIN":
+        user[chat_id]["pin"] = text.strip()
+        state[chat_id] = "LOGIN_SEC"
+        send(chat_id, "Enter your security answer:")
+        return
+    if s == "LOGIN_SEC":
+        u = user[chat_id]["username"]
+        p = user[chat_id]["pin"]
+        ans = text.strip()
+        resp = server({"cmd": "LOGIN", "username": u, "pin": p, "security_answer": ans})
+        if resp.get("status") == "ok":
+            user[chat_id] = {"username": u, "logged_in": True}
+            if u == "admin":
+                send(chat_id, "✅ Admin logged in.", admin_menu())
+            server({"cmd": "SET_CHAT_ID", "chat_id": chat_id})
+            else:
+                send(chat_id, f"✅ Logged in as {u}.\nBalance: ${resp['balance']:.2f}", main_menu())
+            # Automatically set chat_id for 2FA
+            server({"cmd": "SET_CHAT_ID", "chat_id": chat_id})
+        else:
+            send(chat_id, f"❌ {resp.get('message','')}", login_btn())
+        state.pop(chat_id, None)
+        return
+    # Deposit / Withdraw amount entry
+    if s == "DEP_AMT":
+        try:
+            amt = float(text)
+            resp = server({"cmd": "DEPOSIT", "amount": amt})
+            send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')} New balance: ${resp.get('new_balance',0):.2f}" if resp.get('status')=='ok' else resp.get('message',''), main_menu())
+        except:
+            send(chat_id, "Invalid amount.", main_menu())
+        state.pop(chat_id, None)
+        return
+    if s == "WDR_AMT":
+        try:
+            amt = float(text)
+            resp = server({"cmd": "WITHDRAW", "amount": amt})
+            send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", main_menu())
+        except:
+            send(chat_id, "Invalid amount.", main_menu())
+        state.pop(chat_id, None)
+        return
+    # Change PIN flow
+    if s == "PIN_OLD":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["old_pin"] = text.strip()
+        state[chat_id] = "PIN_NEW"
+        send(chat_id, "Enter new PIN (4 digits):")
+        return
+    if s == "PIN_NEW":
+        old = user[chat_id].get("old_pin", "")
+        new = text.strip()
+        resp = server({"cmd": "CHANGE_PIN", "old_pin": old, "new_pin": new})
+        send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", main_menu())
+        state.pop(chat_id, None)
+        return
+    # Restore file name entry
+    if s == "RESTORE_FILE":
+        filename = text.strip()
+        resp = server({"cmd":"RESTORE","file":filename})
+        send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", admin_menu())
+        state.pop(chat_id, None)
+        return
+    if s == "ADMIN_RESET_USER":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["admin_reset_user"] = text.strip()
+        state[chat_id] = "ADMIN_RESET_NEWPIN"
+        send(chat_id, "Enter new PIN:")
+        return
+    if s == "ADMIN_RESET_NEWPIN":
+        target = user[chat_id].get("admin_reset_user","")
+        new_pin = text.strip()
+        resp = server({"cmd":"ADMIN_RESET_PIN","target_user":target,"new_pin":new_pin})
+        send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", admin_menu())
+        state.pop(chat_id, None)
+        return
+        # OTP verification step
+    if s == "OTP_INPUT":
+        u = user[chat_id]["username"]
+        token = user[chat_id]["temp_token"]
+        code = text.strip()
+        resp = server({"cmd": "VERIFY_OTP", "username": u, "temp_token": token, "otp": code})
+        if resp.get("status") == "ok":
+            user[chat_id] = {"username": u, "logged_in": True}
+            send(chat_id, f"✅ Verified! Balance: ${resp['balance']:.2f}", main_menu())
+        else:
+            send(chat_id, f"❌ {resp.get('message','')}", login_btn())
+            user.pop(chat_id, None)
+        state.pop(chat_id, None)
+        return
+        if s == "SET_EMAIL_INPUT":
+        email = text.strip()
+        if email.lower() == "none":
+            email = ""
+        resp = server({"cmd": "SET_EMAIL", "email": email})
+        send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message','')}", main_menu())
+        state.pop(chat_id, None)
+        return
+        if s == "QR_PAY_RECIPIENT":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["qr_recipient"] = text.strip()
+        state[chat_id] = "QR_PAY_AMOUNT"
+        send(chat_id, "Enter amount:")
+        return
+    if s == "QR_PAY_AMOUNT":
+        try:
+            amt = float(text)
+            recipient = user[chat_id].get("qr_recipient", "")
+            # Generate QR
+            bio = generate_qr_image(recipient, amt)
+            bio.seek(0)
+            # Send as photo
+            url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+            files = {'photo': bio}
+            data = {'chat_id': chat_id, 'caption': f'Scan to pay {recipient} ${amt:.2f}'}
+            requests.post(url, files=files, data=data)
+            send(chat_id, "QR code sent. Show it to the payer.", main_menu())
+        except Exception as e:
+            send(chat_id, f"Error generating QR: {e}", main_menu())
+        state.pop(chat_id, None)
+        return
+        if s == "QR_CONFIRM_PAY":
+        if text.strip().lower() == "yes":
+            confirm = user[chat_id].get("qr_confirm", {})
+            recipient = confirm.get("recipient")
+            amount = confirm.get("amount")
+            resp = server({"cmd": "QR_PAY", "qr_data": json.dumps(confirm)})
+            if resp.get("status") == "ok":
+                send(chat_id, f"✅ Paid ${amount:.2f} to {recipient}.", main_menu())
+            else:
+                send(chat_id, f"❌ Payment failed: {resp.get('message','')}", main_menu())
+        else:
+            send(chat_id, "Payment cancelled.", main_menu())
+        state.pop(chat_id, None)
+        return
+        if s == "AI_WAIT":
+        msg = text.strip()
+        resp = server({"cmd": "AI_ASSIST", "message": msg})
+        if resp.get("status") == "ok":
+            send(chat_id, resp.get("reply",""), main_menu())
+        else:
+            send(chat_id, "Sorry, I could not process that.", main_menu())
+        state.pop(chat_id, None)
+        return
+        # Cardless withdrawal flow
+    if s == "CARDLESS_AMOUNT":
+        try:
+            amt = float(text)
+            resp = server({"cmd":"CARDLESS_GENERATE","amount":amt})
+            if resp.get("status") == "ok":
+                send(chat_id, f"Cardless code: {resp['code']}\nAmount: ${resp['amount']:.2f}\nExpires: {resp['expires']}\nShare this code with the recipient.", main_menu())
+            else:
+                send(chat_id, f"Error: {resp.get('message','')}", main_menu())
+        except:
+            send(chat_id, "Invalid amount.", main_menu())
+        state.pop(chat_id, None)
+        return
+    if s == "BILL_PAY_BILLER":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["bill_biller"] = text.strip()
+        state[chat_id] = "BILL_PAY_AMOUNT"
+        send(chat_id, "Enter amount to pay:")
+        return
+    if s == "BILL_PAY_AMOUNT":
+        try:
+            amt = float(text)
+            biller = user[chat_id].get("bill_biller","")
+            resp = server({"cmd":"BILL_PAY","biller":biller,"amount":amt})
+            if resp.get("status") == "ok":
+                send(chat_id, f"Paid ${amt:.2f} to {biller}. New balance: ${resp['new_balance']:.2f}", main_menu())
+            else:
+                send(chat_id, f"Error: {resp.get('message','')}", main_menu())
+        except:
+            send(chat_id, "Invalid amount.", main_menu())
+        state.pop(chat_id, None)
+        return
+    # Savings goals flow (create and contribute)
+    if s == "SAVINGS_GOAL_NAME":
+        user[chat_id] = user.get(chat_id, {})
+        user[chat_id]["goal_name"] = text.strip()
+        state[chat_id] = "SAVINGS_GOAL_TARGET"
+        send(chat_id, "Enter target amount:")
+        return
+    if s == "SAVINGS_GOAL_TARGET":
+        try:
+            target = float(text)
+            goal_name = user[chat_id].get("goal_name","")
+            resp = server({"cmd":"SAVINGS_GOAL_CREATE","goal_name":goal_name,"target":target})
+            if resp.get("status") == "ok":
+                send(chat_id, f"Goal '{goal_name}' created. You can now contribute to it.", main_menu())
+                # After creation, we could immediately ask for contribution, but keep it simple.
+            else:
+                send(chat_id, f"Error: {resp.get('message','')}", main_menu())
+        except:
+            send(chat_id, "Invalid target.", main_menu())
+        state.pop(chat_id, None)
+        return
+        # Default
+    if text == "/start":
+        if user.get(chat_id, {}).get("logged_in"):
+            send(chat_id, f"Welcome back, {user[chat_id]['username']}! 👇", main_menu())
+        else:
+            send(chat_id, "Welcome to Wyllene ATM! 👇", login_btn())
+    else:
+        send(chat_id, "Use buttons or /start", main_menu() if user.get(chat_id, {}).get("logged_in") else login_btn())
+
+# ---------- Callback handler ----------
+def process_callback(chat_id, cb_id, data):
+    print(f"CALLBACK: {data}")
+    if data == "login_start":
+        state[chat_id] = "LOGIN_USER"
+        send(chat_id, "Enter your username:")
+    elif data == "register_start":
+        state[chat_id] = "REG_USER"
+        send(chat_id, "Choose a username:")
+    elif data == "balance":
+        if user.get(chat_id, {}).get("logged_in"):
+            resp = server({"cmd": "BALANCE"})
+            send(chat_id, f"💰 Balance: ${resp.get('balance',0):.2f}", main_menu())
+        else:
+            send(chat_id, "Login first.", login_btn())
+    elif data == "deposit":
+        state[chat_id] = "DEP_AMT"
+        send(chat_id, "Enter amount to deposit:")
+    elif data == "withdraw":
+        state[chat_id] = "WDR_AMT"
+        send(chat_id, "Enter amount to withdraw:")
+    elif data == "history":
+        if user.get(chat_id, {}).get("logged_in"):
+            resp = server({"cmd": "HISTORY"})
+            hist = resp.get("history", [])
+            lines = [f"{t['time']} {t['type']} ${t['amount']:.2f}" for t in hist[:5]]
+            send(chat_id, "Last transactions:\n" + "\n".join(lines) if lines else "No transactions.", main_menu())
+        else:
+            send(chat_id, "Login first.", login_btn())
+    elif data == "transfer":
+        if user.get(chat_id, {}).get("logged_in"):
+            state[chat_id] = "TRANSFER_RECIPIENT"
+            send(chat_id, "Enter recipient username:")
+        else:
+            send(chat_id, "Login first.", login_btn())
+    elif data == "changepin":
+        state[chat_id] = "PIN_OLD"
+        send(chat_id, "Enter current PIN:")
+    elif data == "logout":
+        user.pop(chat_id, None); state.pop(chat_id, None)
+        send(chat_id, "Logged out.", login_btn())
+    elif data == "admin_view":
+        if user.get(chat_id, {}).get("username") == "admin":
+            resp = server({"cmd":"ADMIN_VIEW_ALL"})
+            accs = resp.get("accounts", {})
+            lines = [f"{u}: ${d['balance']:.2f}" for u,d in accs.items()]
+            send(chat_id, "All accounts:
+" + "
+".join(lines) + f"
+Total: ${resp.get('total',0):.2f}", admin_menu())
+        else:
+            send(chat_id, "Admin only.")
+    elif data == "admin_reset":
+        state[chat_id] = "ADMIN_RESET_USER"
+        send(chat_id, "Enter username to reset PIN:")
+    elif data == "backup":
+        if user.get(chat_id, {}).get("username") == "admin":
+            resp = server({"cmd":"BACKUP"})
+            send(chat_id, f"{'✅' if resp.get('status')=='ok' else '❌'} {resp.get('message',resp.get('file',''))}", admin_menu())
+        else:
+            send(chat_id, "Admin only.")
+    elif data == "restore":
+        state[chat_id] = "RESTORE_FILE"
+        send(chat_id, "Enter backup filename (e.g. atm_backup_20250101_120000.zip):")
+        elif data == "enable_2fa":
+        if user.get(chat_id, {}).get("logged_in"):
+            # Update user's two_factor_enabled in server
+            uname = user[chat_id]["username"]
+            # We need an endpoint to toggle 2FA; we'll add TOGGLE_2FA command
+            resp = server({"cmd": "TOGGLE_2FA", "username": uname, "enable": True})
+            if resp.get("status") == "ok":
+                send(chat_id, "✅ Two-factor authentication enabled.", main_menu())
+            else:
+                send(chat_id, f"❌ {resp.get('message','')}", main_menu())
+        else:
+            send(chat_id, "Login first.")
+        elif data == "set_email":
+        state[chat_id] = "SET_EMAIL_INPUT"
+        send(chat_id, "Enter your email address (or 'none' to remove):")
+        elif data == "qr_pay":
+        state[chat_id] = "QR_PAY_RECIPIENT"
+        send(chat_id, "Enter recipient username:")
+    elif data == "scan_qr":
+        state[chat_id] = "SCAN_QR_WAIT"
+        send(chat_id, "Send me a photo of the QR code.")
+        elif data == "ai_assist":
+        state[chat_id] = "AI_WAIT"
+        send(chat_id, "How can I help you? (e.g., 'What's my balance?', 'Deposit $50')")
+        elif data == "cardless_gen":
+        state[chat_id] = "CARDLESS_AMOUNT"
+        send(chat_id, "Enter amount for cardless withdrawal code:")
+    elif data == "bill_pay":
+        # Show billers from server? For simplicity, ask for biller name.
+        state[chat_id] = "BILL_PAY_BILLER"
+        send(chat_id, "Enter biller name (Electricity, Water, Internet):")
+    elif data == "savings_goals":
+        # Show a sub-menu or just ask for goal creation
+        state[chat_id] = "SAVINGS_GOAL_NAME"
+        send(chat_id, "Enter a name for your savings goal:")
+        else:
+        send(chat_id, "Unknown action.")
+    answer_cb(cb_id)
+
+# ---------- Polling loop ----------
+
+def process_photo(chat_id, file_id):
+    if state.get(chat_id) == "SCAN_QR_WAIT":
+        # Download file
+        file_url = f"https://api.telegram.org/bot{TOKEN}/getFile?file_id={file_id}"
+        resp = requests.get(file_url).json()
+        if not resp.get("ok"):
+            send(chat_id, "Failed to get file.")
+            state.pop(chat_id, None)
+            return
+        file_path = resp["result"]["file_path"]
+        download_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
+        # Download to temp file
+        local_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        local_file.write(requests.get(download_url).content)
+        local_file.close()
+        try:
+            qr_data = decode_qr_from_photo(local_file.name)
+            os.unlink(local_file.name)
+            if qr_data:
+                # Try to parse JSON
+                try:
+                    data = json.loads(qr_data)
+                    recipient = data.get("recipient")
+                    amount = data.get("amount")
+                    if not recipient or not amount:
+                        raise ValueError
+                except:
+                    send(chat_id, "Invalid QR code content.")
+                else:
+                    # Confirm with user
+                    user[chat_id] = user.get(chat_id, {})
+                    user[chat_id]["qr_confirm"] = {"recipient": recipient, "amount": amount}
+                    state[chat_id] = "QR_CONFIRM_PAY"
+                    send(chat_id, f"Pay ${amount:.2f} to {recipient}?\nType 'yes' to confirm.")
+            else:
+                send(chat_id, "No QR code found in the image.")
+                state.pop(chat_id, None)
+        except Exception as e:
+            send(chat_id, f"Error processing QR: {e}")
+            state.pop(chat_id, None)
+
+def main():
+    offset = 0
+    print("🤖 Bot polling... Send /start to @wylleneATM_bot")
+    while True:
+        try:
+            resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates",
+                                params={"offset": offset, "timeout": 30})
+            data = resp.json()
+            if data["ok"]:
+                for upd in data["result"]:
+                    offset = upd["update_id"] + 1
+                    if "message" in upd and "text" in upd["message"]:
+                        chat = upd["message"]["chat"]["id"]
+                        text = upd["message"]["text"].strip()
+                        print(f"Text: {text}")
+                        process_text(chat, text)
+                    elif "callback_query" in upd:
+                        cb = upd["callback_query"]
+                        chat = cb["message"]["chat"]["id"]
+                        process_callback(chat, cb["id"], cb["data"])
+        except Exception as e:
+            print("Poll error:", e)
+        time.sleep(0.5)
+
+if __name__ == "__main__":
+    main()
