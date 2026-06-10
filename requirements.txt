@@ -1,7 +1,6 @@
 flask
 requests
 cryptography
-playsound
 qrcode[pil]
 pyzbar
 Pillow
