@@ -89,6 +89,11 @@ def generate_csv(username):
 # ---------- Flask Web App ----------
 web_app = Flask(__name__)
 
+
+@web_app.route('/test')
+def test():
+    return "Wyllene ATM web server is running!"
+
 @web_app.route('/')
 def dashboard():
     users = load_users()
