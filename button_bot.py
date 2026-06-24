@@ -39,8 +39,72 @@ def process_text(chat_id, text):
             send(chat_id, "Welcome! Type /login to start.")
     elif text=="/login":
         state[chat_id]="LOGIN_USER"; send(chat_id,"Username:")
+    elif text=="/ceo":
+        if not user.get(chat_id,{}).get("logged_in"):
+            send(chat_id,"Login first with /login")
+        else:
+            send(chat_id, "CEO Menu:
+/ceo_generate <employee> - Create link token
+/ceo_employees - List linked employees
+/ceo_balance <employee> - View employee balance
+/ceo_history <employee> - View employee transactions
+/ceo_revoke <employee> - Revoke link")
+    elif text.startswith("/ceo_generate"):
+        parts = text.split()
+        if len(parts) < 2: send(chat_id,"Usage: /ceo_generate <employee_username>")
+        else:
+            r = server({"cmd":"GENERATE_LINK_TOKEN","employee":parts[1]})
+            if r.get("status")=="ok":
+                send(chat_id, f"🔗 Token: {r['token']}
+Give this to {r['employee']} to link with /link {r['token']}")
+            else: send(chat_id, f"❌ {r.get('message','')}")
+    elif text.startswith("/link"):
+        parts = text.split()
+        if len(parts) < 2: send(chat_id,"Usage: /link <token>")
+        else:
+            r = server({"cmd":"LINK_ACCOUNT","token":parts[1]})
+            if r.get("status")=="ok":
+                send(chat_id, f"✅ {r.get('message','')}")
+            else: send(chat_id, f"❌ {r.get('message','')}")
+    elif text=="/ceo_employees":
+        r = server({"cmd":"VIEW_LINKED_EMPLOYEES"})
+        if r.get("status")=="ok":
+            emps = r.get("employees",[])
+            if emps: send(chat_id, "Linked employees:
+"+"
+".join(emps))
+            else: send(chat_id, "No linked employees.")
+        else: send(chat_id, f"❌ {r.get('message','')}")
+    elif text.startswith("/ceo_balance"):
+        parts = text.split()
+        if len(parts) < 2: send(chat_id,"Usage: /ceo_balance <employee>")
+        else:
+            r = server({"cmd":"VIEW_EMPLOYEE_BALANCE","employee":parts[1]})
+            if r.get("status")=="ok": send(chat_id, f"💰 {r['username']}: ${r['balance']:.2f}")
+            else: send(chat_id, f"❌ {r.get('message','')}")
+    elif text.startswith("/ceo_history"):
+        parts = text.split()
+        if len(parts) < 2: send(chat_id,"Usage: /ceo_history <employee>")
+        else:
+            r = server({"cmd":"VIEW_EMPLOYEE_HISTORY","employee":parts[1]})
+            if r.get("status")=="ok":
+                hist = r.get("history",[])
+                if hist:
+                    lines = [f"{t['time']} {t['type']} ${t['amount']:.2f}" for t in hist[:5]]
+                    send(chat_id, f"📋 {parts[1]} recent:
+"+"
+".join(lines))
+                else: send(chat_id, "No transactions.")
+            else: send(chat_id, f"❌ {r.get('message','')}")
+    elif text.startswith("/ceo_revoke"):
+        parts = text.split()
+        if len(parts) < 2: send(chat_id,"Usage: /ceo_revoke <employee>")
+        else:
+            r = server({"cmd":"REVOKE_LINK","employee":parts[1]})
+            if r.get("status")=="ok": send(chat_id, f"✅ {r.get('message','')}")
+            else: send(chat_id, f"❌ {r.get('message','')}")
     else:
-        send(chat_id,"Commands: /start, /login")
+        send(chat_id,"Commands: /start, /login, /ceo")
 
 def main():
     # Wait for the socket server to be ready
