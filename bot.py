@@ -9,7 +9,7 @@ from database import get_user
 class WylleneBot:
     def __init__(self):
         # Only these users can use the bot (add your Telegram user ID)
-        self.allowed_users = [YOUR_ID]  # Set to None to allow everyone, or a list like [123456789]
+        self.allowed_users = [8980273422]  # Set to None to allow everyone, or a list like [123456789]
         self.blocked_terms = ["ads", "promo", "free money", "click here", "http", ".com"]
         self.token = BOT_TOKEN
         self.host = HOST
