@@ -8,6 +8,9 @@ from database import get_user
 
 class WylleneBot:
     def __init__(self):
+        # Only these users can use the bot (add your Telegram user ID)
+        self.allowed_users = None  # Set to None to allow everyone, or a list like [123456789]
+        self.blocked_terms = ["ads", "promo", "free money", "click here", "http", ".com"]
         self.token = BOT_TOKEN
         self.host = HOST
         self.port = SOCKET_PORT
@@ -82,6 +85,17 @@ class WylleneBot:
                 self.sessions[chat_id].pop("step", None)
     
     def handle_command(self, chat_id, command):
+        # Check if user is allowed
+        if self.allowed_users and chat_id not in self.allowed_users:
+            self.send_message(chat_id, "⛔ Access denied. This is a private bot.")
+            return
+        
+        # Check for spam keywords
+        text_lower = command.lower()
+        for term in self.blocked_terms:
+            if term in text_lower:
+                print(f"🚫 Blocked spam from {chat_id}: {command}")
+                return  # Silently ignore spam
         """Handle bot commands."""
         session = self.sessions.get(chat_id, {})
         text = command.strip().lower()
