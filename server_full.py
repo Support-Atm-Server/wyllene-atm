@@ -235,8 +235,11 @@ def start_server():
     init_db()
     threading.Thread(target=start_web, daemon=True).start()
     # Also start the Telegram bot inside the server
-    import subprocess
-    subprocess.Popen(["python3", "button_bot.py"])
+    # Start bot in a thread (more reliable on cloud)
+    def run_bot():
+        import button_bot
+        button_bot.main()
+    threading.Thread(target=run_bot, daemon=True).start()
     time.sleep(1.5)
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
