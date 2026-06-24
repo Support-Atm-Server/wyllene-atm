@@ -119,7 +119,7 @@ def start_socket():
 
 # ---------- Telegram Bot (simple) ----------
 def start_bot():
-    time.sleep(5)
+    time.sleep(10)
     import button_bot
     button_bot.main()
 

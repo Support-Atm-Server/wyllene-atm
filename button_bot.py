@@ -32,7 +32,6 @@ def process_text(chat_id, text):
             server({"cmd":"SET_CHAT_ID","chat_id":chat_id})
         else: send(chat_id, f"❌ {r.get('message','')}")
         state.pop(chat_id,None); return
-    # Default
     if text=="/start":
         if user.get(chat_id,{}).get("logged_in"):
             send(chat_id, "You are already logged in.")
@@ -44,7 +43,18 @@ def process_text(chat_id, text):
         send(chat_id,"Commands: /start, /login")
 
 def main():
-    offset=0; print("🤖 Bot started (simple mode).")
+    # Wait for the socket server to be ready
+    for i in range(10):
+        try:
+            s = socket.socket(); s.settimeout(3)
+            s.connect((HOST, PORT)); s.close()
+            print(f"✅ Socket server ready after {i+1} attempts")
+            break
+        except:
+            print(f"Waiting for socket server... attempt {i+1}")
+            time.sleep(3)
+    
+    offset=0; print("🤖 Bot started.")
     while True:
         try:
             resp = requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates", params={"offset":offset,"timeout":30})
