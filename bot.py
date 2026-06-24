@@ -264,18 +264,20 @@ class WylleneBot:
     
     def run(self):
         """Main polling loop."""
-        # Wait for server
+        # Wait for server — retry indefinitely
         print("⏳ Waiting for server...")
-        for i in range(15):
+        connected = False
+        while not connected:
             try:
                 s = socket.socket()
-                s.settimeout(3)
+                s.settimeout(5)
                 s.connect((self.host, self.port))
                 s.close()
+                connected = True
                 print("✅ Server connected")
-                break
-            except:
-                time.sleep(3)
+            except Exception as e:
+                print(f"⏳ Server not ready ({e}), retrying in 5 seconds...")
+                time.sleep(5)
         
         offset = 0
         print("🤖 Enterprise Bot started.")
