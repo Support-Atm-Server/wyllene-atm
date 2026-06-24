@@ -236,6 +236,10 @@ def handle_client(conn, addr):
                 except Exception as e:
                     resp = {"status":"error","message":str(e)}
             
+            elif cmd == "USER_ANALYTICS":
+                resp = {"status":"ok","stats":analytics.get_user_analytics(request.get("username",username))["stats"]}
+            elif cmd == "TRANSACTION_SUMMARY":
+                resp = {"status":"ok","summary":analytics.get_transaction_summary(30)}
             elif cmd == "FIAT_RATES":
                 resp = {"status":"ok","rates":currency_mgr.get_fiat_rates()}
             elif cmd == "CRYPTO_PRICES":
