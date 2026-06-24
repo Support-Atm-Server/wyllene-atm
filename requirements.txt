@@ -1,8 +1,1 @@
 flask
-requests
-cryptography
-qrcode[pil]
-pyzbar
-Pillow
-matplotlib
-colorama
