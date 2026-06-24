@@ -6,5 +6,3 @@ pyzbar
 Pillow
 matplotlib
 colorama
-vosk
-pydub
