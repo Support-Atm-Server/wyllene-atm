@@ -11,6 +11,7 @@ import secrets
 from flask import Flask, request, jsonify, send_from_directory
 from config import HOST, SOCKET_PORT, WEB_PORT, APPROVAL_THRESHOLD
 from database import *
+from fraud_detector import detector
 
 app = Flask(__name__)
 
@@ -37,6 +38,31 @@ def dashboard():
 @app.route('/chat')
 def chat():
     return send_from_directory('templates', 'chat.html')
+
+@app.route('/fraud')
+def fraud_dashboard():
+    """Fraud detection dashboard."""
+    from flask import render_template_string
+    report = detector.get_fraud_report(7)
+    
+    html = '<!DOCTYPE html><html><head><title>Fraud Detection</title>'
+    html += '<style>body{font-family:system-ui;margin:20px;background:#0a0a1a;color:#fff}'
+    html += 'table{border-collapse:collapse;width:100%}th,td{border:1px solid #333;padding:12px}'
+    html += 'th{background:#1a1a3a}.high{background:rgba(255,0,0,0.2)}.medium{background:rgba(255,165,0,0.2)}'
+    html += '.low{background:rgba(255,255,0,0.1)}.safe{color:#4CAF50}</style></head><body>'
+    html += '<h1>🛡️ Wyllene Fraud Detection</h1>'
+    html += f'<p>Last 7 days — {len(report)} flagged transactions</p>'
+    html += '<table><tr><th>Time</th><th>User</th><th>Type</th><th>Amount</th><th>Risk</th><th>Flags</th><th>Status</th></tr>'
+    
+    for txn in report:
+        score = txn.get("risk_score", 0)
+        css = "high" if score >= 70 else "medium" if score >= 40 else "low"
+        html += f'<tr class="{css}"><td>{txn["timestamp"]}</td><td>{txn["username"]}</td><td>{txn["type"]}</td>'
+        html += f'<td>${txn["amount"]:,.2f}</td><td>{score}/100</td>'
+        html += f'<td>{" | ".join(txn.get("flags",[]))}</td><td>{txn.get("status","")}</td></tr>'
+    
+    html += '</table></body></html>'
+    return html
 
 @app.route('/api/health')
 def health():
@@ -76,7 +102,10 @@ def handle_client(conn, addr):
                     user = get_user(username); user["balance"] += amt
                     update_user(username, user); add_transaction(username, "DEPOSIT", amt)
                     add_audit(username, "DEPOSIT", f"${amt:,.2f}")
+                    fraud = detector.analyze_transaction(username, amt, "DEPOSIT")
                     resp = {"status":"ok","new_balance":user["balance"]}
+                    if fraud["risk_score"] >= 40:
+                        resp["fraud_alert"] = fraud
             
             elif cmd == "WITHDRAW":
                 amt = float(req.get("amount",0))
@@ -90,7 +119,10 @@ def handle_client(conn, addr):
                 else:
                     user["balance"] -= amt; update_user(username, user)
                     add_transaction(username, "WITHDRAW", amt); add_audit(username, "WITHDRAW", f"${amt:,.2f}")
+                    fraud = detector.analyze_transaction(username, amt, "DEPOSIT")
                     resp = {"status":"ok","new_balance":user["balance"]}
+                    if fraud["risk_score"] >= 40:
+                        resp["fraud_alert"] = fraud
             
             elif cmd == "TRANSFER":
                 target = req.get("recipient","").strip().lower()
