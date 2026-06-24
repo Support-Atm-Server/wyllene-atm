@@ -12,6 +12,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from config import HOST, SOCKET_PORT, WEB_PORT, APPROVAL_THRESHOLD
 from database import *
 from fraud_detector import detector
+from currency import currency_mgr, FIAT_CURRENCIES, CRYPTO_CURRENCIES
 
 app = Flask(__name__)
 
@@ -62,6 +63,52 @@ def fraud_dashboard():
         html += f'<td>{" | ".join(txn.get("flags",[]))}</td><td>{txn.get("status","")}</td></tr>'
     
     html += '</table></body></html>'
+    return html
+
+@app.route('/currency')
+def currency_dashboard():
+    """Multi-currency dashboard."""
+    users = get_all_users()
+    fiat_rates = currency_mgr.get_fiat_rates()
+    crypto_prices = currency_mgr.get_crypto_prices()
+    
+    html = '<!DOCTYPE html><html><head><title>Wyllene Currency</title>'
+    html += '<style>body{font-family:system-ui;margin:20px;background:#0a0a1a;color:#fff}'
+    html += 'table{border-collapse:collapse;width:100%;margin:10px 0}th,td{border:1px solid #333;padding:12px}'
+    html += 'th{background:#1a1a3a}.card{background:#1a1a3a;padding:20px;border-radius:10px;margin:10px 0}'
+    html += '.crypto{color:gold}.fiat{color:#4CAF50}</style></head><body>'
+    html += '<h1>🌍 Wyllene Multi-Currency</h1>'
+    
+    # Live rates
+    html += '<div class="card"><h2>💱 Live Exchange Rates (USD Base)</h2><table><tr><th>Currency</th><th>Rate</th></tr>'
+    for code, rate in fiat_rates.items():
+        if code in FIAT_CURRENCIES:
+            html += f'<tr><td>{FIAT_CURRENCIES[code]["symbol"]} {code} — {FIAT_CURRENCIES[code]["name"]}</td><td>{rate:.4f}</td></tr>'
+    html += '</table></div>'
+    
+    # Crypto prices
+    html += '<div class="card"><h2>🪙 Crypto Prices</h2><table><tr><th>Currency</th><th>Price (USD)</th></tr>'
+    for code, price in crypto_prices.items():
+        html += f'<tr><td>{CRYPTO_CURRENCIES[code]["symbol"]} {code} — {CRYPTO_CURRENCIES[code]["name"]}</td><td>${price:,.2f}</td></tr>'
+    html += '</table></div>'
+    
+    # User balances
+    html += '<h2>👥 User Balances</h2>'
+    for u, d in users.items():
+        fiat = currency_mgr.get_user_fiat_balances(u)
+        crypto = currency_mgr.get_user_crypto_balances(u)
+        html += f'<div class="card"><h3>{u}</h3>'
+        html += '<b>Fiat:</b> '
+        for code, bal in fiat.items():
+            if bal > 0:
+                html += f'{FIAT_CURRENCIES.get(code,{}).get("symbol","")}{bal:,.2f} {code} | '
+        html += '<br><b>Crypto:</b> '
+        for code, bal in crypto.items():
+            if bal > 0:
+                html += f'{CRYPTO_CURRENCIES[code]["symbol"]} {bal:.6f} {code} | '
+        html += '</div>'
+    
+    html += '</body></html>'
     return html
 
 @app.route('/api/health')
@@ -189,6 +236,25 @@ def handle_client(conn, addr):
                 except Exception as e:
                     resp = {"status":"error","message":str(e)}
             
+            elif cmd == "FIAT_RATES":
+                resp = {"status":"ok","rates":currency_mgr.get_fiat_rates()}
+            elif cmd == "CRYPTO_PRICES":
+                resp = {"status":"ok","prices":currency_mgr.get_crypto_prices()}
+            elif cmd == "FIAT_CONVERT":
+                resp = currency_mgr.convert_fiat(username,
+                    request.get("from","USD"), request.get("to","USD"), float(request.get("amount",0)))
+            elif cmd == "CRYPTO_BUY":
+                resp = currency_mgr.buy_crypto(username,
+                    request.get("crypto","BTC"), float(request.get("amount",0)))
+            elif cmd == "CRYPTO_SELL":
+                resp = currency_mgr.sell_crypto(username,
+                    request.get("crypto","BTC"), float(request.get("amount",0)))
+            elif cmd == "MY_BALANCES":
+                resp = {
+                    "status": "ok",
+                    "fiat": currency_mgr.get_user_fiat_balances(username),
+                    "crypto": currency_mgr.get_user_crypto_balances(username)
+                }
             else: resp = {"status":"error","message":"Unknown command"}
             
             conn.sendall(json.dumps(resp).encode())
