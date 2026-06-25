@@ -70,6 +70,7 @@ def backup_page():
 def backup_create():
     from system_health import health_system
 from private_wealth import wealth as pw
+from private_wealth import wealth as pw
     result = health_system.create_full_backup()
     if result["status"] == "ok":
         return f"<h1 style='color:#4CAF50;text-align:center'>✅ Backup Created!</h1><p style='text-align:center'>{result['backup_file']} — {result['total_size_mb']} MB</p><p style='text-align:center'><a href='/backup'>Back</a></p>"
@@ -243,6 +244,23 @@ def wealth_home():
     
     </body></html>"""
     return html
+
+@app.route('/wealth/login', methods=['POST'])
+def wealth_login():
+    from flask import request
+    code = request.form.get("invite_code", "").strip().upper()
+    if code in pw.invite_codes:
+        level = pw.invite_codes[code]
+        banker = pw.assign_banker()
+        return f"""<!DOCTYPE html><html><head><title>Welcome</title>
+        <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:50px;text-align:center}}
+        h1{{color:#D4AF37;font-size:42px}}.card{{background:#0d0d20;border:1px solid #D4AF37;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
+        a{{color:#D4AF37}}</style></head><body>
+        <h1>👑 Welcome to Private Wealth</h1>
+        <div class='card'><h2>{level}</h2><p>Your personal banker: <b>{banker}</b></p>
+        <p style='color:#888'>Your exclusive dashboard is being prepared.</p></div>
+        <a href='/wealth'>Enter Dashboard</a> | <a href='/dashboard'>Command Center</a></body></html>"""
+    return f"<h1 style='color:#F44336'>❌ Invalid Code</h1><p><a href='/wealth'>Try Again</a></p>"
 
 @app.route('/wealth/login', methods=['POST'])
 def wealth_login():
