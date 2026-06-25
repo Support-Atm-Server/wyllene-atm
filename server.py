@@ -14,6 +14,7 @@ from family_legacy import family
 import market_economy
 from advanced_features import advanced
 from dna_legacy import dna
+from ai_rivals import ai_rivals
 
 app = Flask(__name__)
 
@@ -390,6 +391,99 @@ def succession_war():
     <p>{result.get('message','')}</p>
     <p><i>{result.get('drama','')}</i></p>
     <a href='/exclusive'>Back</a></body></html>"""
+    return html
+
+
+@app.route('/rivals')
+def rivals_hub():
+    """AI Rival Dynasties Hub."""
+    rivals = ai_rivals.get_all_rivals()
+    
+    if not rivals:
+        ai_rivals.generate_rival_dynasties(5)
+        rivals = ai_rivals.get_all_rivals()
+    
+    html = """<!DOCTYPE html><html><head><title>AI Rivals</title>
+    <style>
+    body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#FF4444;text-align:center;font-size:36px}
+    .subtitle{text-align:center;color:#888;font-style:italic}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;max-width:1200px;margin:30px auto}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card:hover{border-color:#FF4444}
+    .card h3{color:#FF4444;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #222;padding:10px}
+    th{background:#1a0000;color:#FF4444}
+    .ai{color:#FF4444}.player{color:#D4AF37}
+    .btn{display:inline-block;padding:10px 20px;border-radius:5px;text-decoration:none;font-weight:bold;margin:5px}
+    .btn-red{background:#FF4444;color:#000}
+    .btn-outline{border:1px solid #FF4444;color:#FF4444}
+    a{color:#D4AF37;text-decoration:none}
+    </style></head><body>
+    <h1>🤖 AI RIVAL DYNASTIES</h1>
+    <p class='subtitle'>Intelligent competitors that adapt, grow, and challenge your empire</p>
+    
+    <div class='grid'>
+        <div class='card'>
+            <h3>⚔️ Simulate AI Turns</h3>
+            <p>Advance all AI dynasties by one cycle.</p>
+            <a href='/rivals/simulate' class='btn btn-red'>Simulate AI Turn</a>
+        </div>
+        <div class='card'>
+            <h3>🆕 Generate New Rivals</h3>
+            <p>Create fresh AI dynasties to compete against.</p>
+            <a href='/rivals/generate' class='btn btn-outline'>Generate Rivals</a>
+        </div>
+    </div>
+    
+    <h2>🏆 Dynasty Rankings</h2>
+    <table><tr><th>Rank</th><th>Dynasty</th><th>Type</th><th>Personality</th><th>Wealth</th><th>Members</th></tr>"""
+    
+    for i, r in enumerate(rivals[:10]):
+        html += f"<tr><td>{i+1}</td><td><b>{r['dynasty_name']}</b></td><td class='ai'>AI</td><td>{r['personality']}</td><td>${r['net_worth']:,.0f}</td><td>{r['members']}</td></tr>"
+    
+    html += "</table>"
+    html += "<p style='text-align:center;margin-top:30px'><a href='/dashboard'>Command Center</a> | <a href='/exclusive'>S-Tier</a></p>"
+    html += "</body></html>"
+    return html
+
+@app.route('/rivals/simulate')
+def rivals_simulate():
+    results = ai_rivals.simulate_all_ai_turns()
+    
+    html = """<!DOCTYPE html><html><head><title>AI Turns Simulated</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#FF4444}table{width:100%;max-width:800px;margin:20px auto;border-collapse:collapse}
+    th,td{border:1px solid #222;padding:12px}th{background:#1a0000;color:#FF4444}
+    a{color:#D4AF37}</style></head><body>
+    <h1>⚔️ AI TURNS SIMULATED</h1>
+    <table><tr><th>Dynasty</th><th>Action</th><th>Impact</th></tr>"""
+    
+    for r in results:
+        impact = r['action']['impact']
+        color = "#4CAF50" if impact > 0 else "#F44336"
+        html += f"<tr><td><b>{r['dynasty']}</b></td><td>{r['action']['desc']}</td><td style='color:{color}'>${impact:+,.0f}</td></tr>"
+    
+    html += "</table><p style='text-align:center'><a href='/rivals'>Back</a></p></body></html>"
+    return html
+
+@app.route('/rivals/generate')
+def rivals_generate():
+    created = ai_rivals.generate_rival_dynasties(3)
+    
+    html = """<!DOCTYPE html><html><head><title>Rivals Generated</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#FF4444}table{width:100%;max-width:800px;margin:20px auto;border-collapse:collapse}
+    th,td{border:1px solid #222;padding:12px}th{background:#1a0000;color:#FF4444}
+    a{color:#D4AF37}</style></head><body>
+    <h1>🆕 NEW RIVALS GENERATED</h1>
+    <table><tr><th>Dynasty</th><th>Founder</th><th>Personality</th><th>Strategy</th></tr>"""
+    
+    for c in created:
+        html += f"<tr><td><b>{c['dynasty']}</b></td><td>{c['founder']}</td><td>{c['personality']}</td><td>{c['strategy']}</td></tr>"
+    
+    html += "</table><p style='text-align:center'><a href='/rivals'>Back</a></p></body></html>"
     return html
 
 # ============================================================
