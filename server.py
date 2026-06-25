@@ -279,6 +279,109 @@ def start_socket():
 
 # ----- Main -----
 
+@app.route('/protect')
+def protect_home():
+    """Asset Protection Dashboard."""
+    return """<!DOCTYPE html><html><head><title>Wyllene Asset Protection</title>
+    <style>
+    body{font-family:Georgia;background:#0a0a0a;color:#fff;margin:0;padding:20px}
+    .header{text-align:center;padding:30px;background:linear-gradient(135deg,#1a0000,#0a0000);border-bottom:2px solid #ff4444}
+    h1{color:#ff4444;font-size:40px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:1200px;margin:30px auto}
+    .card{background:#1a1a1a;border:1px solid #333;padding:25px;border-radius:10px}
+    .card h3{color:#ff4444;margin-top:0}
+    .btn{background:#ff4444;color:#fff;padding:12px 25px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;margin:5px}
+    input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
+    </style></head><body>
+    <div class="header"><h1>🛡️ ASSET PROTECTION</h1><p>Wealth Defense & Legal Shield</p></div>
+    <div class="grid">
+    <div class="card"><h3>🏢 Create LLC</h3>
+    <form action="/protect/llc" method="post">
+    <input name="owner" placeholder="Your username">
+    <input name="company_name" placeholder="LLC Name">
+    <select name="jurisdiction"><option>Delaware</option><option>Wyoming</option><option>Nevada</option><option>Cayman Islands</option></select>
+    <input name="assets" placeholder="Assets to protect ($)">
+    <button type="submit" class="btn">Form LLC</button></form></div>
+    
+    <div class="card"><h3>🏦 Offshore Trust</h3>
+    <form action="/protect/offshore" method="post">
+    <input name="creator" placeholder="Your username">
+    <input name="trust_name" placeholder="Trust Name">
+    <select name="jurisdiction"><option>Cayman Islands</option><option>Switzerland</option><option>Singapore</option><option>Liechtenstein</option><option>Dubai</option></select>
+    <input name="amount" placeholder="Amount to transfer ($)">
+    <button type="submit" class="btn">Create Trust</button></form></div>
+    
+    <div class="card"><h3>🛡️ Insurance</h3>
+    <form action="/protect/insurance" method="post">
+    <input name="username" placeholder="Your username">
+    <select name="type"><option>Liability</option><option>Property</option><option>Life</option><option>Cyber</option><option>Directors & Officers</option></select>
+    <input name="coverage" placeholder="Coverage amount ($)">
+    <button type="submit" class="btn">Buy Insurance</button></form></div>
+    
+    <div class="card"><h3>📜 Estate Plan</h3>
+    <form action="/protect/will" method="post">
+    <input name="username" placeholder="Your username">
+    <input name="executor" placeholder="Executor name">
+    <input name="beneficiaries" placeholder="Beneficiaries (comma separated)">
+    <button type="submit" class="btn">Create Will</button></form></div>
+    
+    <div class="card"><h3>💍 Pre-Nup</h3>
+    <form action="/protect/prenup" method="post">
+    <input name="person1" placeholder="Your username">
+    <input name="person2" placeholder="Spouse username">
+    <input name="assets" placeholder="Assets to protect ($)">
+    <button type="submit" class="btn">Sign Pre-Nup</button></form></div>
+    
+    <div class="card"><h3>🏛️ Foundation</h3>
+    <form action="/protect/foundation" method="post">
+    <input name="founder" placeholder="Your username">
+    <input name="name" placeholder="Foundation Name">
+    <input name="amount" placeholder="Endowment ($)">
+    <button type="submit" class="btn">Create Foundation</button></form></div>
+    </div></body></html>"""
+
+@app.route('/protect/llc', methods=['POST'])
+def protect_llc():
+    from flask import request
+    result = protection.create_llc(request.form.get("owner"), request.form.get("company_name"),
+                                    request.form.get("jurisdiction"), float(request.form.get("assets", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/offshore', methods=['POST'])
+def protect_offshore():
+    from flask import request
+    result = protection.create_offshore_trust(request.form.get("creator"), request.form.get("trust_name"),
+                                               request.form.get("jurisdiction"), float(request.form.get("amount", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/insurance', methods=['POST'])
+def protect_insurance():
+    from flask import request
+    result = protection.buy_insurance(request.form.get("username"), request.form.get("type"),
+                                       float(request.form.get("coverage", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/will', methods=['POST'])
+def protect_will():
+    from flask import request
+    result = protection.create_will(request.form.get("username"), request.form.get("executor"),
+                                     request.form.get("beneficiaries"))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/prenup', methods=['POST'])
+def protect_prenup():
+    from flask import request
+    result = protection.sign_prenup(request.form.get("person1"), request.form.get("person2"),
+                                     float(request.form.get("assets", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/foundation', methods=['POST'])
+def protect_foundation():
+    from flask import request
+    result = protection.create_foundation(request.form.get("founder"), request.form.get("name"),
+                                           float(request.form.get("amount", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/protect'>Back</a>"
+
 @app.route('/dynasty')
 def dynasty_home():
     """Dynasty — Generational Wealth Simulator."""
