@@ -1,6 +1,7 @@
 """Wyllene Dynasty — Clean Server (No Duplicates)."""
 import os, json, socket, threading, time, secrets
 from flask import Flask, request, jsonify, send_from_directory
+from bulletproof import safe_route, rate_limit, add_security_headers, sanitize_input, backup_database, system_health
 from config import HOST, SOCKET_PORT, WEB_PORT, APPROVAL_THRESHOLD
 from database import *
 from fraud_detector import detector
@@ -23,7 +24,40 @@ app = Flask(__name__)
 # ============================================================
 # DASHBOARD
 # ============================================================
+@app.route('/health')
+def health_check():
+    """System health check."""
+    health = system_health()
+    return jsonify(health)
+
+@app.route('/backup')
+def trigger_backup():
+    """Manual backup trigger."""
+    result = backup_database()
+    return f"<h1>💾 {result}</h1><a href='/dashboard'>Back</a>"
+
+@app.route('/test')
+def test():
+    return "OK"
+
+@app.route('/chat')
+def chat():
+    return """<!DOCTYPE html><html><head><title>Wyllene AI</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}
+    h1{color:#D4AF37}input{width:400px;padding:15px;margin:10px;background:#0d0d20;border:1px solid #333;color:#fff;font-size:16px}
+    button{background:#D4AF37;color:#000;padding:15px 30px;border:none;font-weight:bold;cursor:pointer;font-size:16px}
+    .response{background:#0d0d20;border:1px solid #222;padding:30px;max-width:600px;margin:30px auto;border-radius:12px;color:#aaa}
+    a{color:#D4AF37}</style></head><body>
+    <h1>🤖 WYLLENE AI ADVISOR</h1>
+    <p style='color:#888'>Your personal wealth intelligence</p>
+    <form action='/chat' method='get'>
+    <input name='q' placeholder='Ask your AI advisor...'><br>
+    <button type='submit'>Ask AI</button></form>
+    <div class='response'><p>Ask me about wealth, strategy, investments, or your dynasty.</p></div>
+    <a href='/dashboard'>Command Center</a></body></html>"""
+
 @app.route('/dashboard')
+@safe_route
 def unified_dashboard():
     economy = market_economy.economy
     market = economy.generate_market_year()
@@ -59,6 +93,7 @@ def unified_dashboard():
 # MARKETS
 # ============================================================
 @app.route('/market')
+@safe_route
 def market_home():
     economy = market_economy.economy
     market = economy.generate_market_year()
@@ -91,6 +126,7 @@ def market_home():
     return html
 
 @app.route('/market/ipo', methods=['GET','POST'])
+@safe_route
 def market_ipo():
     economy = market_economy.economy
     if request.method == 'GET':
@@ -126,6 +162,7 @@ def market_ipo():
 # S-TIER EXCLUSIVE FEATURES
 # ============================================================
 @app.route('/exclusive')
+@safe_route
 def exclusive_hub():
     """S-Tier Exclusive Features Hub."""
     html = """<!DOCTYPE html><html><head><title>Wyllene Elite Features</title>
@@ -259,6 +296,7 @@ def art_patronage():
 
 
 @app.route('/dna')
+@safe_route
 def dna_hub():
     """DNA Legacy Hub."""
     bloodlines = dna.get_all_bloodlines()
@@ -397,6 +435,7 @@ def succession_war():
 
 
 @app.route('/rivals')
+@safe_route
 def rivals_hub():
     """AI Rival Dynasties Hub."""
     rivals = ai_rivals.get_all_rivals()
@@ -472,6 +511,7 @@ def rivals_simulate():
 
 
 @app.route('/timetravel')
+@safe_route
 def timetravel_hub():
     """Time Travel Scenarios Hub."""
     scenarios = time_travel.get_all_scenarios()
@@ -519,6 +559,7 @@ def timetravel_hub():
 
 
 @app.route('/geopolitics')
+@safe_route
 def geopolitics_hub():
     """Geopolitical Influence Hub."""
     event = geopolitics.generate_world_event()
@@ -552,7 +593,7 @@ def geopolitics_hub():
         <h3>""" + event['name'] + """</h3>
         <p>""" + event['desc'] + """</p>
         <div class='impact' style='color:""" + ('#4CAF50' if event['market'] > 0 else '#F44336') + """'>Market Impact: """ + f"{event['market']*100:+.0f}%" + """</div>
-        <p>Regions: """ + event['regions'] + """</p>
+        <p>Regions: """ + ', '.join(event['regions']) + """</p>
         <a href='/geopolitics/newevent' class='btn btn-red'>🔄 New Event</a>
     </div>
     
@@ -738,4 +779,5 @@ if __name__ == "__main__":
     print("🏰 Wyllene Dynasty Starting...")
     initialize()
     threading.Thread(target=start_socket, daemon=True).start()
+    app.after_request(add_security_headers)
     app.run(host="0.0.0.0", port=WEB_PORT)
