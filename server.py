@@ -15,6 +15,7 @@ import market_economy
 from advanced_features import advanced
 from dna_legacy import dna
 from ai_rivals import ai_rivals
+from time_travel import time_travel
 
 app = Flask(__name__)
 
@@ -466,6 +467,92 @@ def rivals_simulate():
         html += f"<tr><td><b>{r['dynasty']}</b></td><td>{r['action']['desc']}</td><td style='color:{color}'>${impact:+,.0f}</td></tr>"
     
     html += "</table><p style='text-align:center'><a href='/rivals'>Back</a></p></body></html>"
+    return html
+
+
+@app.route('/timetravel')
+def timetravel_hub():
+    """Time Travel Scenarios Hub."""
+    scenarios = time_travel.get_all_scenarios()
+    
+    html = """<!DOCTYPE html><html><head><title>Time Travel</title>
+    <style>
+    body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#D4AF37;text-align:center;font-size:36px}
+    .subtitle{text-align:center;color:#888;font-style:italic;margin-bottom:30px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;max-width:1200px;margin:0 auto}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px;transition:all 0.3s}
+    .card:hover{transform:translateY(-3px)}
+    .card h3{margin:0 0 10px 0;font-size:22px}
+    .year{color:#888;font-size:14px}
+    .desc{color:#aaa;margin:10px 0}
+    .impact{font-size:24px;font-weight:bold;margin:10px 0}
+    .lesson{color:#D4AF37;font-style:italic;margin:10px 0}
+    .btn{display:inline-block;padding:10px 20px;border-radius:5px;text-decoration:none;font-weight:bold;margin:5px}
+    .btn-time{background:#9C27B0;color:#fff}
+    a{color:#D4AF37;text-decoration:none}
+    </style></head><body>
+    <h1>🕰️ TIME TRAVEL SCENARIOS</h1>
+    <p class='subtitle'>Replay history's greatest market events with your dynasty</p>
+    
+    <div class='grid'>"""
+    
+    for s in scenarios:
+        html += f"""
+        <div class='card' style='border-left:3px solid {s["color"]}'>
+            <h3>{s['emoji']} {s['name']}</h3>
+            <div class='year'>📅 {s['year']}</div>
+            <p class='desc'>{s['desc']}</p>
+            <div class='impact' style='color:{s["color"]}'>Market: {s['impact']*100:+.0f}%</div>
+            <p>⏱️ Duration: {s['duration']}</p>
+            <p>🏆 Survivors: {s['survivors']}</p>
+            <p class='lesson'>💡 {s['lesson']}</p>
+            <a href='/timetravel/simulate?scenario={s["name"]}&wealth=1000000' class='btn btn-time'>🕰️ Simulate with $1M</a>
+            <a href='/timetravel/simulate?scenario={s["name"]}&wealth=10000000' class='btn btn-time'>🕰️ Simulate with $10M</a>
+        </div>"""
+    
+    html += """</div>
+    <p style='text-align:center;margin-top:30px'><a href='/dashboard'>Command Center</a> | <a href='/exclusive'>S-Tier</a></p>
+    </body></html>"""
+    return html
+
+@app.route('/timetravel/simulate')
+def timetravel_simulate():
+    from flask import request
+    scenario_name = request.args.get("scenario")
+    wealth = float(request.args.get("wealth", 1000000))
+    
+    result = time_travel.simulate_scenario(scenario_name, wealth)
+    if not result:
+        return "<h1>Scenario not found</h1>"
+    
+    s = result["scenario"]
+    change_color = "#4CAF50" if result["change"] > 0 else "#F44336"
+    
+    html = f"""<!DOCTYPE html><html><head><title>{s['name']} Result</title>
+    <style>
+    body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}}
+    h1{{color:{s['color']};font-size:42px}}
+    .card{{background:#0d0d20;border:2px solid {s['color']};padding:40px;max-width:600px;margin:30px auto;border-radius:16px}}
+    .result{{font-size:60px;font-weight:bold;color:{s['color']};margin:20px 0}}
+    .change{{font-size:32px;color:{change_color};margin:10px 0}}
+    .lesson{{color:#D4AF37;font-style:italic;margin:20px 0;font-size:18px}}
+    .stat{{display:inline-block;margin:15px 25px}}
+    .stat-value{{font-size:28px;color:#D4AF37}}
+    .stat-label{{font-size:11px;color:#888}}
+    a{{color:#D4AF37;text-decoration:none;margin:0 10px}}
+    </style></head><body>
+    <h1>{s['emoji']} {s['name']} ({s['year']})</h1>
+    <div class='card'>
+    <div class='result'>{result['rating']}</div>
+    <div class='change'>Change: ${result['change']:+,.0f}</div>
+    <div class='stat'><div class='stat-value'>${result['starting_wealth']:,.0f}</div><div class='stat-label'>Starting Wealth</div></div>
+    <div class='stat'><div class='stat-value'>${result['ending_wealth']:,.0f}</div><div class='stat-label'>Ending Wealth</div></div>
+    <p class='lesson'>💡 {s['lesson']}</p>
+    <p style='color:#aaa'>{result['message']}</p>
+    </div>
+    <a href='/timetravel'>Back to Scenarios</a> | <a href='/dashboard'>Command Center</a>
+    </body></html>"""
     return html
 
 @app.route('/rivals/generate')
