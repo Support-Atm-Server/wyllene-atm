@@ -73,6 +73,7 @@ from private_wealth import wealth as pw
 from family_office import family_office
 from early_adopter import early_adopter
 from wealth_2024 import wealth_2024
+from dynasty_elite import dynasty_elite
 
 @app.route('/health')
 def health_check():
@@ -318,6 +319,119 @@ def wealth_login():
 
 
 
+
+
+@app.route('/dynasty-elite')
+def dynasty_elite_hub():
+    """DYNASTY-ELITE Supreme Tier Dashboard."""
+    benefits = dynasty_elite.get_benefits()
+    dynasties = dynasty_elite.get_dynasties()
+    council = dynasty_elite.get_council()
+    rituals = dynasty_elite.get_rituals()
+    reqs = dynasty_elite.get_requirements()
+    profile = dynasty_elite.generate_elite_profile("House Malebadi")
+    
+    html = """<!DOCTYPE html><html><head><title>DYNASTY-ELITE</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Georgia',serif;background:#050510;color:#e0e0e0;min-height:100vh}
+    .header{text-align:center;padding:40px;background:linear-gradient(180deg,#1a0010,#050510);border-bottom:2px solid #FF4081}
+    .header h1{font-size:42px;color:#FF4081;letter-spacing:5px}
+    .header .subtitle{color:#888;font-style:italic;margin-top:10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:25px;max-width:1400px;margin:30px auto;padding:0 30px}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card:hover{border-color:#FF4081}
+    .card h3{color:#FF4081;margin-bottom:15px;font-size:18px}
+    .supreme-card{background:linear-gradient(135deg,#0d0d20,#1a0010);border:3px solid #FF4081;grid-column:1/-1}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+    .stat-box{text-align:center;padding:20px;background:#0a0a15;border-radius:8px}
+    .stat-value{font-size:28px;color:#FF4081;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+    .perk-item{display:flex;align-items:center;gap:15px;padding:12px;border-bottom:1px solid #1a1a30}
+    .perk-icon{font-size:28px;width:50px;text-align:center}
+    .dynasty-card{background:linear-gradient(135deg,#1a0010,#0a0a15);border:1px solid #FF4081;padding:20px;border-radius:12px;margin:15px 0}
+    .sigil{font-size:48px;text-align:center}
+    .motto{font-style:italic;color:#FF4081;text-align:center;margin:10px 0}
+    .ritual-item{padding:15px;background:#0a0a15;border-radius:8px;margin:10px 0;border-left:3px solid #FF4081}
+    .requirement{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #1a1a30}
+    .met{color:#4CAF50}.unmet{color:#F44336}
+    a{color:#FF4081;text-decoration:none}
+    .btn{display:inline-block;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;margin:10px}
+    .btn-pink{background:#FF4081;color:#000}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>👑 DYNASTY-ELITE</h1>
+        <p class='subtitle'>The Supreme Tier — For Dynasties That Define Generations — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card supreme-card'>
+            <h3>👑 Elite Dynasty Profile — """ + profile['dynasty'] + """</h3>
+            <div class='stat-grid'>
+                <div class='stat-box'><div class='stat-value'>#""" + str(profile['membership_number']) + """</div><div class='stat-label'>Membership #</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(profile['voting_power']) + """%</div><div class='stat-label'>Voting Power</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(profile['council_seats']) + """</div><div class='stat-label'>Council Seats</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + profile['wealth_rank'] + """</div><div class='stat-label'>Wealth Rank</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(profile['influence_score']) + """</div><div class='stat-label'>Influence Score</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + f"{profile['legacy_points']:,}" + """</div><div class='stat-label'>Legacy Points</div></div>
+            </div>
+        </div>
+        
+        <div class='card'>
+            <h3>✅ Elite Requirements</h3>"""
+    
+    for key, val in reqs.items():
+        met_class = "met" if val else "unmet"
+        display = "✅" if val else "❌"
+        html += f"<div class='requirement'><span>{key.replace('_',' ').title()}</span><span class='{met_class}'>{display} {val}</span></div>"
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🎁 Supreme Benefits</h3>"""
+    
+    for b in benefits:
+        html += f"""<div class='perk-item'><div class='perk-icon'>{b['icon']}</div><div><b>{b['name']}</b><p style='color:#888;font-size:11px'>{b['desc']}</p></div></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🏰 Elite Dynasties</h3>"""
+    
+    for d in dynasties:
+        html += f"""<div class='dynasty-card'><div class='sigil'>{d['sigil']}</div><h3 style='text-align:center'>{d['name']}</h3>
+        <div class='motto'>"{d['motto']}"</div>
+        <p style='text-align:center'>Founder: <b>{d['founder']}</b></p>
+        <p style='text-align:center'>Seat: {d['seat']} | Industry: {d['industry']}</p>
+        <p style='text-align:center'>Generations: {d['generations']} | Net Worth: {d['net_worth']}</p></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🏛️ Council Chambers</h3>"""
+    
+    for c in council:
+        html += f"""<div class='ritual-item'><b>{c['name']}</b><p style='color:#888'>{c['location']} — {c['purpose']}</p></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>⚜️ Dynasty Rituals</h3>"""
+    
+    for r in rituals:
+        html += f"""<div class='ritual-item'><b>{r['name']}</b><p style='color:#888'>{r['desc']}</p></div>"""
+    
+    html += """</div>
+    </div>
+    
+    <div style='text-align:center;padding:40px;color:#555;border-top:1px solid #222;margin-top:40px'>
+        <p>👑 DYNASTY-ELITE — The Supreme Tier — Founded by Lunga Titus Malebadi</p>
+        <p style='font-size:11px'>© 2026 All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
 
 @app.route('/wealth-2024')
 def wealth_2024_hub():
