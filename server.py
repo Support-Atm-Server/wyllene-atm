@@ -70,11 +70,7 @@ def backup_page():
 def backup_create():
     from system_health import health_system
 from private_wealth import wealth as pw
-from private_wealth import wealth as pw
-    result = health_system.create_full_backup()
-    if result["status"] == "ok":
-        return f"<h1 style='color:#4CAF50;text-align:center'>✅ Backup Created!</h1><p style='text-align:center'>{result['backup_file']} — {result['total_size_mb']} MB</p><p style='text-align:center'><a href='/backup'>Back</a></p>"
-    return f"<h1 style='color:#F44336'>❌ Failed</h1><a href='/backup'>Back</a>"
+from family_office import family_office
 
 @app.route('/health')
 def health_check():
@@ -245,45 +241,6 @@ def wealth_home():
     </body></html>"""
     return html
 
-@app.route('/wealth/login', methods=['POST'])
-def wealth_login():
-    from flask import request
-    code = request.form.get("invite_code", "").strip().upper()
-    if code in pw.invite_codes:
-        level = pw.invite_codes[code]
-        banker = pw.assign_banker()
-        return f"""<!DOCTYPE html><html><head><title>Welcome</title>
-        <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:50px;text-align:center}}
-        h1{{color:#D4AF37;font-size:42px}}.card{{background:#0d0d20;border:1px solid #D4AF37;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
-        a{{color:#D4AF37}}</style></head><body>
-        <h1>👑 Welcome to Private Wealth</h1>
-        <div class='card'><h2>{level}</h2><p>Your personal banker: <b>{banker}</b></p>
-        <p style='color:#888'>Your exclusive dashboard is being prepared.</p></div>
-        <a href='/wealth'>Enter Dashboard</a> | <a href='/dashboard'>Command Center</a></body></html>"""
-    return f"<h1 style='color:#F44336'>❌ Invalid Code</h1><p><a href='/wealth'>Try Again</a></p>"
-
-@app.route('/wealth/login', methods=['POST'])
-def wealth_login():
-    from flask import request
-    code = request.form.get("invite_code", "").strip().upper()
-    if code in pw.invite_codes:
-        level = pw.invite_codes[code]
-        banker = pw.assign_banker()
-        return f"""<!DOCTYPE html><html><head><title>Welcome</title>
-        <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:50px;text-align:center}}
-        h1{{color:#D4AF37;font-size:42px}}.card{{background:#0d0d20;border:1px solid #D4AF37;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
-        a{{color:#D4AF37}}</style></head><body>
-        <h1>👑 Welcome to Private Wealth</h1>
-        <div class='card'><h2>{level}</h2><p>Your personal banker: <b>{banker}</b></p>
-        <p style='color:#888'>Your exclusive dashboard is being prepared.</p></div>
-        <a href='/wealth'>Enter Dashboard</a> | <a href='/dashboard'>Command Center</a></body></html>"""
-    return f"<h1 style='color:#F44336'>❌ Invalid Code</h1><p><a href='/wealth'>Try Again</a></p>"
-
-@app.route('/wealth/login', methods=['POST'])
-def wealth_login():
-    from flask import request
-    return f"<h1>✅ Access Granted!</h1><a href='/dashboard'>Dashboard</a>"
-
 @app.route('/dynasty')
 def dynasty_home():
     return """<!DOCTYPE html><html><head><title>Dynasty Life</title>
@@ -347,6 +304,102 @@ def analytics_home():
     <div class='metric'>Active</div><p style='color:#888'>Full analytics dashboard coming soon</p></div>
     <a href='/dashboard'>Dashboard</a></body></html>"""
 
+
+@app.route('/wealth/login', methods=['POST'])
+def wealth_login():
+    from flask import request
+    code = request.form.get("invite_code", "").strip().upper()
+    codes = {"WYLLENE-ALPHA":"Founding Member","WEALTH-2024":"Early Adopter","FAMILY-OFFICE":"Family Office"}
+    if code in codes:
+        return f"<h1 style='color:#D4AF37'>✅ Welcome — {codes[code]}</h1><a href='/wealth'>Enter</a>"
+    return "<h1 style='color:#F44336'>❌ Invalid Code</h1><a href='/wealth'>Try Again</a>"
+
+
+@app.route('/family-office')
+def family_office_hub():
+    """Family Office Dashboard."""
+    services = family_office.get_all_services()
+    constitution = family_office.get_constitution()
+    report = family_office.generate_family_report("Malebadi")
+    
+    html = """<!DOCTYPE html><html><head><title>Family Office</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Georgia',serif;background:#050510;color:#e0e0e0;min-height:100vh}
+    .header{text-align:center;padding:40px;background:linear-gradient(180deg,#0a0010,#050510);border-bottom:2px solid #D4AF37}
+    .header h1{font-size:42px;color:#D4AF37;letter-spacing:5px}
+    .header .subtitle{color:#888;font-style:italic;margin-top:10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:25px;max-width:1400px;margin:30px auto;padding:0 30px}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px;transition:all 0.3s}
+    .card:hover{border-color:#D4AF37}
+    .card h3{color:#D4AF37;margin-bottom:15px;font-size:18px;display:flex;align-items:center;gap:10px}
+    .report-card{background:linear-gradient(135deg,#0d0d20,#1a0030);border:2px solid #D4AF37;grid-column:1/-1}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+    .stat-box{text-align:center;padding:15px;background:#0a0a15;border-radius:8px}
+    .stat-value{font-size:24px;color:#D4AF37;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #1a1a30;padding:10px;text-align:left;font-size:13px}
+    th{background:#0a0a15;color:#D4AF37;font-size:10px;text-transform:uppercase}
+    .feature-list{list-style:none;padding:0}
+    .feature-list li{padding:6px 0;color:#aaa;font-size:12px}
+    .feature-list li:before{content:'✦ ';color:#D4AF37}
+    .constitution{background:#0a0a15;border:1px solid #D4AF37;padding:20px;border-radius:8px;font-style:italic;color:#aaa}
+    a{color:#D4AF37;text-decoration:none}
+    .btn{display:inline-block;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;margin:10px}
+    .btn-gold{background:#D4AF37;color:#000}
+    .btn-outline{border:1px solid #D4AF37;color:#D4AF37}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>🏛️ FAMILY OFFICE</h1>
+        <p class='subtitle'>Comprehensive Wealth Management — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card report-card'>
+            <h3>📊 Family Report — """ + report['dynasty'] + """ Dynasty</h3>
+            <div class='stat-grid'>
+                <div class='stat-box'><div class='stat-value'>$""" + f"{report['total_assets']:,.0f}" + """</div><div class='stat-label'>Total Assets</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(report['heirs']) + """</div><div class='stat-label'>Heirs</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(report['trusts_active']) + """</div><div class='stat-label'>Active Trusts</div></div>
+                <div class='stat-box'><div class='stat-value'>$""" + f"{report['tax_saved_ytd']:,.0f}" + """</div><div class='stat-label'>Tax Saved YTD</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(report['investment_return']) + """%</div><div class='stat-label'>Investment Return</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(report['next_generation_readiness']) + """%</div><div class='stat-label'>Next Gen Readiness</div></div>
+            </div>
+        </div>"""
+    
+    for key, s in services.items():
+        html += f"""
+        <div class='card'>
+            <h3>{s['icon']} {s['name']}</h3>
+            <p style='color:#aaa;margin-bottom:10px'>{s['desc']}</p>
+            <ul class='feature-list'>"""
+        for f in s['features']:
+            html += f"<li>{f}</li>"
+        html += "</ul></div>"
+    
+    html += f"""
+        <div class='card'>
+            <h3>📜 Family Constitution</h3>
+            <div class='constitution'>
+                <p style='color:#D4AF37;font-weight:bold'>Preamble</p>
+                <p>{constitution['preamble']}</p>
+                <p style='color:#D4AF37;font-weight:bold;margin-top:15px'>Core Values</p>
+                <p>{' • '.join(constitution['values'])}</p>
+                <p style='color:#D4AF37;font-weight:bold;margin-top:15px'>Governance</p>
+                <p>Voting: {constitution['voting_threshold']} | Distribution: {constitution['distribution_policy']}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div style='text-align:center;padding:40px;color:#555;border-top:1px solid #222;margin-top:40px'>
+        <p>🏛️ Wyllene Family Office — Founded by Lunga Titus Malebadi</p>
+        <p style='font-size:11px'>© 2026 All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
 
 @app.route('/assets')
 def assets_home():
