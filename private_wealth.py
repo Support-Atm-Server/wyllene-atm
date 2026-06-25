@@ -28,6 +28,8 @@ class PrivateWealth:
             "WYLLENE-ALPHA": "Founding Member",
             "WEALTH-2024": "Early Adopter",
             "FAMILY-OFFICE": "Family Office",
+            "DYNASTY-ELITE": "Dynasty Elite",
+            "CHAIRMAN-CIRCLE": "Chairman's Circle",
             "DYNASTY-ELITE": "Dynasty Member",
             "CHAIRMAN-CIRCLE": "Chairman's Circle",
         }
