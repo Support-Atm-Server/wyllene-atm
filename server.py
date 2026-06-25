@@ -278,6 +278,170 @@ def start_socket():
         threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()
 
 # ----- Main -----
+
+@app.route('/wealth')
+def wealth_home():
+    """Private Wealth homepage."""
+    return """<!DOCTYPE html><html><head><title>Wyllene Private Wealth</title>
+    <style>body{font-family:Georgia;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}
+    .box{border:2px solid #D4AF37;padding:60px;border-radius:10px;background:#1a1a1a}
+    h1{color:#D4AF37;font-size:48px;letter-spacing:5px}
+    p{color:#aaa;font-size:18px;margin:20px 0}
+    input{padding:15px 30px;font-size:18px;background:#0a0a0a;border:1px solid #D4AF37;color:#fff;border-radius:5px;text-align:center}
+    button{padding:15px 40px;background:#D4AF37;color:#0a0a0a;border:none;border-radius:5px;font-weight:bold;font-size:18px;cursor:pointer;margin-left:10px}
+    </style></head><body><div class="box">
+    <h1>👑 WYLLENE PRIVATE WEALTH</h1>
+    <p>Exclusive banking for the elite</p>
+    <form action="/wealth/login" method="post">
+    <input name="invite_code" placeholder="Enter invitation code">
+    <button type="submit">Enter</button>
+    </form></div></body></html>"""
+
+@app.route('/wealth/login', methods=['POST'])
+def wealth_login():
+    """Verify invitation code."""
+    from flask import request
+    code = request.form.get("invite_code", "").strip().upper()
+    from wealth_config import VALID_INVITE_CODES
+    if code in VALID_INVITE_CODES:
+        return f"""<html><head><title>Register</title>
+        <style>body{{font-family:Georgia;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh}}
+        .box{{border:2px solid #D4AF37;padding:40px;border-radius:10px;background:#1a1a1a}}
+        input{{display:block;width:100%;padding:12px;margin:10px 0;background:#0a0a0a;border:1px solid #D4AF37;color:#fff;border-radius:5px}}
+        button{{background:#D4AF37;color:#0a0a0a;padding:12px 30px;border:none;border-radius:5px;font-weight:bold;cursor:pointer}}
+        </style></head><body><div class="box">
+        <h2 style="color:#D4AF37;">Register for Private Wealth</h2>
+        <form action="/wealth/register" method="post">
+        <input type="hidden" name="invite_code" value="{code}">
+        <input name="username" placeholder="Choose username" required>
+        <input name="pin" placeholder="Create PIN" type="password" required>
+        <input name="full_name" placeholder="Full name" required>
+        <button type="submit">Join</button>
+        </form></div></body></html>"""
+    return "Invalid invitation code. <a href='/wealth'>Try again</a>"
+
+@app.route('/wealth/register', methods=['POST'])
+def wealth_register():
+    """Register new wealth client."""
+    from flask import request
+    username = request.form.get("username", "")
+    pin = request.form.get("pin", "")
+    full_name = request.form.get("full_name", "")
+    invite_code = request.form.get("invite_code", "")
+    
+    from wealth_db import add_client, get_client, get_assets, get_net_worth, update_tier
+    from wealth_config import TIERS, SERVICES
+    result = add_client(username, pin, full_name, invite_code)
+    if result["status"] == "ok":
+        return f"Welcome to Wyllene Private Wealth, {full_name}! Your personal banker is {result['banker']}. <a href='/wealth/me?user={username}'>View Dashboard</a>"
+    return f"Error: {result.get('message','')} <a href='/wealth'>Back</a>"
+
+@app.route('/wealth/jets')
+def jets_page():
+    from luxury import JETS
+    html = '<h1 style="color:#D4AF37">🛩️ Private Jet Fleet</h1>'
+    for j in JETS:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{j["image"]} {j["name"]}</h3>'
+        html += f'<p>Range: {j["range"]} | Seats: {j["seats"]} | ${j["price_per_hour"]:,}/hour</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/cars')
+def cars_page():
+    from luxury import CARS
+    html = '<h1 style="color:#D4AF37">🏎️ Luxury Car Fleet</h1>'
+    for c in CARS:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{c["image"]} {c["name"]}</h3>'
+        html += f'<p>Price: ${c["price"]:,} | Top Speed: {c["speed"]}</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/hotels')
+def hotels_page():
+    from luxury import HOTELS
+    html = '<h1 style="color:#D4AF37">🏨 Five-Star Hotels</h1>'
+    for h in HOTELS:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{h["image"]} {h["name"]} — {h["location"]}</h3>'
+        html += f'<p>${h["price_per_night"]:,}/night | {"⭐" * h["rating"]}</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/wines')
+def wines_page():
+    from luxury import WINES
+    html = '<h1 style="color:#D4AF37">🍷 Fine Wine Collection</h1>'
+    for w in WINES:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{w["image"]} {w["name"]} ({w["vintage"]})</h3>'
+        html += f'<p>{w["region"]} | ${w["price"]:,}</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/yachts')
+def yachts_page():
+    from luxury import YACHTS
+    html = '<h1 style="color:#D4AF37">🛥️ Yacht Charter</h1>'
+    for y in YACHTS:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{y["image"]} {y["name"]}</h3>'
+        html += f'<p>{y["length"]} | {y["guests"]} guests | ${y["price_per_week"]:,}/week</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/jewelry')
+def jewelry_page():
+    from luxury import JEWELRY
+    html = '<h1 style="color:#D4AF37">💎 Jewelry Collection</h1>'
+    for j in JEWELRY:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{j["image"]} {j["name"]}</h3>'
+        html += f'<p>{j["carats"]} carats | ${j["price"]:,}</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/events')
+def events_page():
+    from luxury import EVENTS
+    html = '<h1 style="color:#D4AF37">🎫 Exclusive Events</h1>'
+    for e in EVENTS:
+        html += f'<div style="background:#1a1a1a;padding:20px;margin:10px;border-radius:10px;border:1px solid #333">'
+        html += f'<h3>{e["image"]} {e["name"]}</h3>'
+        html += f'<p>{e["location"]} | {e["date"]} | ${e["price"]:,}</p>'
+        html += f'</div>'
+    return html
+
+@app.route('/wealth/me')
+def wealth_dashboard():
+    """Client wealth dashboard."""
+    from flask import request, render_template_string
+    username = request.args.get("user", "")
+    from wealth_db import get_client, get_assets, get_net_worth, update_tier
+    from wealth_config import TIERS, SERVICES
+    client = get_client(username)
+    if not client:
+        return "Client not found."
+    
+    assets = get_assets(username)
+    net_worth = get_net_worth(username)
+    tier = update_tier(username)
+    benefits = TIERS.get(tier, {}).get("benefits", [])
+    
+    with open("templates/wealth.html") as f:
+        template = f.read()
+    
+    return render_template_string(
+        template,
+        banker=client["banker_name"],
+        net_worth=net_worth,
+        tier=tier,
+        benefits=benefits,
+        assets=assets,
+        services=SERVICES
+    )
+
 if __name__ == "__main__":
     print("🏢 Wyllene Enterprise Bank Starting...")
     initialize()
