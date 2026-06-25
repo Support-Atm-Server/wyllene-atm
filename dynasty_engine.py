@@ -1,3 +1,9 @@
+
+"""
+Wyllene Dynasty — Generational Wealth Engine
+Founded by Lunga Titus Malebadi
+© 2026 All Rights Reserved
+"""
 """Wyllene Dynasty — Core Life Simulation Engine."""
 import sqlite3
 import random

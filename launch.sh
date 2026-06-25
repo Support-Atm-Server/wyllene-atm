@@ -1,42 +1,29 @@
 #!/bin/bash
-# Wyllene ATM Safe Launcher - prevents overlapping bots
+cd ~/Documents/atm_project
 
-LOCKFILE="/tmp/wyllene_bot.lock"
-PROJECT_DIR="$HOME/Documents/atm_project"
-
-# ---- Kill any existing instances ----
-echo "🧹 Cleaning up old processes..."
-pkill -f "python3 bot.py" 2>/dev/null
-pkill -f "python3 server.py" 2>/dev/null
-rm -f "$LOCKFILE"
+# Kill old processes
+pkill -9 python3 2>/dev/null
+sudo fuser -k 9999/tcp 2>/dev/null
 sleep 2
 
-# ---- Check if lock file exists (prevents double launch) ----
-if [ -f "$LOCKFILE" ]; then
-    echo "❌ Another instance is already running!"
-    echo "   If you're sure it's not, run: rm -f $LOCKFILE"
-    exit 1
-fi
+# Start server
+echo "🏢 Starting server..."
+python3 server.py &
+SERVER_PID=$!
 
-# ---- Create lock file ----
-touch "$LOCKFILE"
+# Wait for socket to be ready
+echo "⏳ Waiting for socket server..."
+for i in {1..20}; do
+    if python3 -c "import socket; s=socket.socket(); s.connect(('localhost',9999)); s.close()" 2>/dev/null; then
+        echo "✅ Socket ready"
+        break
+    fi
+    sleep 2
+done
 
-# ---- Cleanup function (runs on exit) ----
-cleanup() {
-    echo ""
-    echo "🛑 Shutting down..."
-    pkill -f "python3 server.py" 2>/dev/null
-    rm -f "$LOCKFILE"
-    echo "👋 Done."
-}
+# Start bot
+echo "🤖 Starting bot..."
+python3 bot.py
 
-# Ensure cleanup runs when script exits
-trap cleanup EXIT INT TERM
-
-# ---- Start the server (which starts the bot internally) ----
-cd "$PROJECT_DIR"
-echo "🏢 Starting Wyllene Enterprise Bank..."
-python3 server.py
-
-# The script will stay here until you press Ctrl+C
-# Then it will automatically clean up
+# Cleanup
+kill $SERVER_PID 2>/dev/null

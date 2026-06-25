@@ -279,76 +279,76 @@ def start_socket():
 
 # ----- Main -----
 
+@app.route('/market/ipo', methods=['POST'])
+def market_ipo():
+    from flask import request
+    result = economy.ipo_company(request.form.get("founder"), request.form.get("business"),
+                                  request.form.get("ticker"), request.form.get("sector"),
+                                  float(request.form.get("price", 0)), int(request.form.get("shares", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
+
+@app.route('/market/buy', methods=['POST'])
+def market_buy():
+    from flask import request
+    result = economy.buy_stocks(request.form.get("username"), request.form.get("ticker"),
+                                 int(request.form.get("shares", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
+
+
 @app.route('/market')
 def market_home():
-    """Market & Economy Dashboard."""
-    market = economy.get_market_state()
+    import market_economy
+    economy = market_economy.economy
+    
+    # Generate market data
+    market = economy.generate_market_year()
     stocks = economy.get_stock_prices()
     leaderboard = economy.update_leaderboard()
-    events = economy.trigger_economic_event()
     
     html = """<!DOCTYPE html><html><head><title>Wyllene Markets</title>
     <style>
     body{font-family:Georgia;background:#0a0a0a;color:#fff;margin:0;padding:20px}
     .header{text-align:center;padding:30px;background:linear-gradient(135deg,#001a00,#000a00);border-bottom:2px solid #00ff00}
-    h1{color:#00ff00;font-size:40px}
-    .ticker{background:#1a1a1a;padding:15px;text-align:center;border-bottom:1px solid #333;overflow:hidden;white-space:nowrap}
-    .ticker span{margin:0 30px;color:gold}
+    h1{color:#00ff00;font-size:36px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;max-width:1200px;margin:30px auto}
     .card{background:#1a1a1a;border:1px solid #333;padding:25px;border-radius:10px}
     .card h3{margin-top:0}
     .up{color:#00ff00}.down{color:#ff4444}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #333;padding:10px}
+    th{background:#252550}
     .btn{background:#00ff00;color:#000;padding:12px 25px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;margin:5px}
-    input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:10px}
+    .stat{font-size:28px;color:#00ff00;font-weight:bold}
     </style></head><body>
-    <div class="header"><h1>📈 WYLLENE MARKETS</h1><p>""" + f"Market: {market['market']} | Growth: {market['growth']*100:+.1f}% | Volatility: {market['volatility']}" + """</p></div>
-    <div class="ticker">"""
-    
-    for s in stocks[:8]:
-        color = "up" if random.random() > 0.4 else "down"
-        html += f"<span class='{color}'>{s['ticker']} ${s['price']:.2f}</span>"
-    
-    html += """</div>
+    <div class="header"><h1>📈 WYLLENE MARKETS</h1>
+    <p>Market: """ + market['market'] + """ | Growth: """ + f"{market['growth']*100:+.1f}%" + """ | Volatility: """ + market['volatility'] + """</p></div>
     <div class="grid">
-    <div class="card"><h3>🚀 IPO Company</h3>
-    <form action="/market/ipo" method="post">
-    <input name="founder" placeholder="Your username">
-    <input name="business" placeholder="Business name">
-    <input name="ticker" placeholder="Ticker (e.g., AAPL)">
-    <select name="sector"><option>Tech</option><option>Finance</option><option>Healthcare</option><option>Energy</option><option>Real Estate</option></select>
-    <input name="price" placeholder="Share price ($)">
-    <input name="shares" placeholder="Total shares">
-    <button type="submit" class="btn">Go Public! 🚀</button></form></div>
-    
-    <div class="card"><h3>📈 Buy Stocks</h3>
-    <form action="/market/buy" method="post">
-    <input name="username" placeholder="Your username">
-    <input name="ticker" placeholder="Stock ticker">
-    <input name="shares" placeholder="Number of shares">
-    <button type="submit" class="btn">Buy Shares 📈</button></form></div>
-    
-    <div class="card"><h3>📊 Stock Prices</h3>
-    <table>"""
+    <div class="card"><h3>📊 Market Overview</h3>
+    <div class="stat">""" + market['market'] + """</div>
+    <p>Growth Rate: """ + f"{market['growth']*100:+.1f}%" + """</p>
+    <p>Volatility: """ + market['volatility'] + """</p>
+    <p style='color:#aaa'>""" + market.get('description','') + """</p></div>
+    <div class="card"><h3>🚀 Quick Actions</h3>
+    <a href="/market/ipo" class="btn">🚀 IPO Company</a>
+    <a href="/dynasty" class="btn">👤 Dynasty</a>
+    <a href="/family" class="btn">👨‍👩‍👧‍👦 Family</a></div>
+    <div class="card"><h3>📈 Stock Prices</h3><table><tr><th>Ticker</th><th>Company</th><th>Price</th><th>Sector</th></tr>"""
     
     for s in stocks:
-        html += f"<tr><td>{s['ticker']}</td><td>{s['name']}</td><td>${s['price']:.2f}</td><td>{s['sector']}</td></tr>"
+        color = "up" if s['price'] > 100 else "down"
+        html += f"<tr><td><b>{s['ticker']}</b></td><td>{s['name']}</td><td class='{color}'>${s['price']:.2f}</td><td>{s['sector']}</td></tr>"
     
-    html += """</table></div>
+    html += "</table></div>"
     
-    <div class="card"><h3>🏆 Dynasty Leaderboard</h3>
-    <table><tr><th>Rank</th><th>Dynasty</th><th>Wealth</th><th>Members</th><th>Score</th></tr>"""
+    html += "<div class='card'><h3>🏆 Dynasty Leaderboard</h3><table><tr><th>Rank</th><th>Dynasty</th><th>Wealth</th><th>Members</th><th>Score</th></tr>"
     
     for i, d in enumerate(leaderboard[:10]):
-        html += f"<tr><td>{i+1}</td><td>{d['dynasty']}</td><td>${d['wealth']:,.0f}</td><td>{d['members']}</td><td>{d['score']:,}</td></tr>"
+        html += f"<tr><td>{'🥇' if i==0 else '🥈' if i==1 else '🥉' if i==2 else i+1}</td><td><b>{d['dynasty']}</b></td><td>${d['wealth']:,.0f}</td><td>{d['members']}</td><td>{d['score']:,}</td></tr>"
     
-    html += """</table></div>
+    if not leaderboard:
+        html += "<tr><td colspan='5'>No dynasties yet! <a href='/dynasty'>Create one</a></td></tr>"
     
-    <div class="card"><h3>📰 Economic News</h3>"""
-    
-    html += f"<p><b>{events['name']}:</b> {events['desc']} (Impact: {events['impact']}, Sectors: {events['sectors']})</p>"
-    
-    html += """</div></div></body></html>"""
+    html += "</table></div></div></body></html>"
     return html
 
 @app.route('/market/ipo', methods=['POST'])
@@ -364,6 +364,49 @@ def market_buy():
     from flask import request
     result = economy.buy_stocks(request.form.get("username"), request.form.get("ticker"),
                                  int(request.form.get("shares", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
+
+
+@app.route('/market')
+def market_home():
+    import market_economy
+    economy = market_economy.economy
+    market = economy.get_market_state()
+    stocks = economy.get_stock_prices()
+    leaderboard = economy.update_leaderboard()
+    
+    html = "<h1 style='color:gold'>📈 Wyllene Markets</h1>"
+    html += f"<p><b>{market['market']}</b> | Growth: {market['growth']*100:+.1f}%</p>"
+    html += "<table border='1'><tr><th>Ticker</th><th>Company</th><th>Price</th></tr>"
+    for s in stocks:
+        html += f"<tr><td>{s['ticker']}</td><td>{s['name']}</td><td>${s['price']:.2f}</td></tr>"
+    html += "</table>"
+    html += "<h2>Leaderboard</h2><table border='1'><tr><th>Rank</th><th>Dynasty</th><th>Wealth</th><th>Score</th></tr>"
+    for i, d in enumerate(leaderboard[:10]):
+        html += f"<tr><td>{i+1}</td><td>{d['dynasty']}</td><td>${d['wealth']:,.0f}</td><td>{d['score']:,}</td></tr>"
+    html += "</table>"
+    return html
+
+@app.route('/market/ipo', methods=['GET','POST'])
+def market_ipo():
+    import market_economy
+    economy = market_economy.economy
+    from flask import request
+    
+    if request.method == 'GET':
+        return """<h1>🚀 IPO</h1><form method='post'>
+        <input name='founder' placeholder='Username'><br>
+        <input name='business' placeholder='Business name'><br>
+        <input name='ticker' placeholder='Ticker'><br>
+        <input name='price' placeholder='Share price'><br>
+        <input name='shares' placeholder='Total shares'><br>
+        <button type='submit'>Go Public</button></form>"""
+    
+    result = economy.ipo_company(
+        request.form.get("founder"), request.form.get("business"),
+        request.form.get("ticker"), "Tech",
+        float(request.form.get("price", 0)), int(request.form.get("shares", 0))
+    )
     return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
 
 @app.route('/family')
@@ -588,7 +631,7 @@ def dynasty_home():
     input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
     .stat{font-size:28px;color:gold;font-weight:bold}
     </style></head><body>
-    <div class="header"><h1>🏰 WYLLENE DYNASTY</h1><p>Generational Wealth Engine</p></div>
+    <div class="header"><h1>🏰 WYLLENE DYNASTY</h1><p style='color:#D4AF37;font-size:14px'>Lunga Titus Malebadi — Founder & CEO</p><p>Generational Wealth Engine</p></div>
     <div class="grid">
     <div class="card"><h3>Create Character</h3>
     <form action="/dynasty/create" method="post">
@@ -685,7 +728,7 @@ def wealth_home():
     input{padding:15px 30px;font-size:18px;background:#0a0a0a;border:1px solid #D4AF37;color:#fff;border-radius:5px;text-align:center}
     button{padding:15px 40px;background:#D4AF37;color:#0a0a0a;border:none;border-radius:5px;font-weight:bold;font-size:18px;cursor:pointer;margin-left:10px}
     </style></head><body><div class="box">
-    <h1>👑 WYLLENE PRIVATE WEALTH</h1>
+    <h1>👑 WYLLENE PRIVATE WEALTH</h1><p style='color:#D4AF37;margin-top:5px'>By Lunga Titus Malebadi — Founder & CEO</p>
     <p>Exclusive banking for the elite</p>
     <form action="/wealth/login" method="post">
     <input name="invite_code" placeholder="Enter invitation code">
