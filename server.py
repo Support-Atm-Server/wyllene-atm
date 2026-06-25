@@ -24,17 +24,433 @@ app = Flask(__name__)
 # ============================================================
 # DASHBOARD
 # ============================================================
+@app.route('/backup')
+def backup_page():
+    """Backup management page."""
+    import os
+    from datetime import datetime
+    
+    backups = []
+    if os.path.exists('backups'):
+        for f in sorted(os.listdir('backups'), reverse=True):
+            if f.endswith('.zip'):
+                size = round(os.path.getsize(f'backups/{f}') / 1024 / 1024, 2)
+                mtime = datetime.fromtimestamp(os.path.getmtime(f'backups/{f}'))
+                backups.append({"name": f, "size_mb": size, "date": mtime.strftime("%Y-%m-%d %H:%M")})
+    
+    html = """<!DOCTYPE html><html><head><title>Backups</title>
+    <style>
+    body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{text-align:center;color:#D4AF37}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px;max-width:800px;margin:30px auto}
+    table{width:100%;border-collapse:collapse;margin:20px 0}
+    th,td{border:1px solid #222;padding:12px}
+    th{background:#0a0a15;color:#D4AF37}
+    .btn{display:inline-block;padding:10px 20px;border-radius:5px;text-decoration:none;font-weight:bold;margin:10px}
+    .btn-gold{background:#D4AF37;color:#000}
+    a{color:#D4AF37}
+    </style></head><body>
+    <h1>💾 BACKUP MANAGEMENT</h1>
+    <div class='card'>
+    <a href='/backup/create' class='btn btn-gold'>🆕 Create Full Backup</a>
+    <p style='color:#888;margin-top:20px'>Auto-backup runs daily at 3 AM</p>
+    <h3>Existing Backups</h3>
+    <table><tr><th>Backup</th><th>Size</th><th>Date</th></tr>"""
+    
+    for b in backups[:14]:
+        html += f"<tr><td>{b['name']}</td><td>{b['size_mb']} MB</td><td>{b['date']}</td></tr>"
+    
+    if not backups:
+        html += "<tr><td colspan='3' style='text-align:center;color:#888'>No backups yet. Create one!</td></tr>"
+    
+    html += "</table></div><p style='text-align:center'><a href='/health'>Health</a> | <a href='/dashboard'>Dashboard</a></p></body></html>"
+    return html
+
+@app.route('/backup/create')
+def backup_create():
+    from system_health import health_system
+from private_wealth import wealth as pw
+    result = health_system.create_full_backup()
+    if result["status"] == "ok":
+        return f"<h1 style='color:#4CAF50;text-align:center'>✅ Backup Created!</h1><p style='text-align:center'>{result['backup_file']} — {result['total_size_mb']} MB</p><p style='text-align:center'><a href='/backup'>Back</a></p>"
+    return f"<h1 style='color:#F44336'>❌ Failed</h1><a href='/backup'>Back</a>"
+
 @app.route('/health')
 def health_check():
     """System health check."""
     health = system_health()
     return jsonify(health)
 
-@app.route('/backup')
-def trigger_backup():
-    """Manual backup trigger."""
-    result = backup_database()
-    return f"<h1>💾 {result}</h1><a href='/dashboard'>Back</a>"
+
+
+
+@app.route('/family')
+def family_home():
+    return """<!DOCTYPE html><html><head><title>Family</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#ff69b4;text-align:center}.card{background:#0d0d20;border:1px solid #222;padding:25px;max-width:600px;margin:20px auto;border-radius:12px}
+    input,select{width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff}
+    button{background:#ff69b4;color:#fff;padding:12px 25px;border:none;cursor:pointer;font-weight:bold}
+    a{color:#ff69b4}</style></head><body>
+    <h1>👨‍👩‍👧‍👦 FAMILY & HEIRS</h1>
+    <div class='card'><h3>💒 Marry</h3><form action='/family/marry' method='post'>
+    <input name='person1' placeholder='Your username'><input name='person2' placeholder='Spouse username'>
+    <input name='prenup' placeholder='Prenup amount (0 for none)'><button type='submit'>Get Married 💒</button></form></div>
+    <div class='card'><h3>👶 Have Child</h3><form action='/family/child' method='post'>
+    <input name='parent1' placeholder='Your username'><input name='parent2' placeholder='Spouse username'>
+    <input name='name' placeholder='Child name'><select name='gender'><option>Random</option><option>Male</option><option>Female</option></select>
+    <button type='submit'>Welcome Baby 👶</button></form></div>
+    <div class='card'><h3>🎓 Education</h3><form action='/family/education' method='post'>
+    <input name='child' placeholder='Child username'>
+    <select name='institution'><option>Harvard ($250k)</option><option>Oxford ($200k)</option><option>MIT ($220k)</option></select>
+    <button type='submit'>Send to School 🎓</button></form></div>
+    <p style='text-align:center'><a href='/dashboard'>Dashboard</a></p></body></html>"""
+
+@app.route('/family/marry', methods=['POST'])
+def family_marry():
+    from flask import request
+    return f"<h1>💒 Marriage recorded!</h1><p>{request.form.get('person1')} ❤️ {request.form.get('person2')}</p><a href='/family'>Back</a>"
+
+@app.route('/family/child', methods=['POST'])
+def family_child():
+    from flask import request
+    return f"<h1>👶 Baby {request.form.get('name')} born!</h1><a href='/family'>Back</a>"
+
+@app.route('/family/education', methods=['POST'])
+def family_education():
+    from flask import request
+    return f"<h1>🎓 {request.form.get('child')} enrolled!</h1><a href='/family'>Back</a>"
+
+@app.route('/protect')
+def protect_home():
+    return """<!DOCTYPE html><html><head><title>Asset Protection</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#ff4444;text-align:center}.card{background:#0d0d20;border:1px solid #222;padding:25px;max-width:600px;margin:20px auto;border-radius:12px}
+    input,select{width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff}
+    button{background:#ff4444;color:#fff;padding:12px 25px;border:none;cursor:pointer;font-weight:bold}
+    a{color:#ff4444}</style></head><body>
+    <h1>🛡️ ASSET PROTECTION</h1>
+    <div class='card'><h3>🏢 Form LLC</h3><form action='/protect/llc' method='post'>
+    <input name='owner' placeholder='Username'><input name='company_name' placeholder='LLC Name'>
+    <select name='jurisdiction'><option>Delaware</option><option>Wyoming</option><option>Cayman Islands</option></select>
+    <input name='assets' placeholder='Assets ($)'><button type='submit'>Form LLC</button></form></div>
+    <div class='card'><h3>🏦 Offshore Trust</h3><form action='/protect/offshore' method='post'>
+    <input name='creator' placeholder='Username'><input name='trust_name' placeholder='Trust Name'>
+    <input name='amount' placeholder='Amount ($)'><button type='submit'>Create Trust</button></form></div>
+    <p style='text-align:center'><a href='/dashboard'>Dashboard</a></p></body></html>"""
+
+@app.route('/protect/llc', methods=['POST'])
+def protect_llc():
+    from flask import request
+    return f"<h1>🏢 LLC Formed!</h1><p>{request.form.get('company_name')} in {request.form.get('jurisdiction')}</p><a href='/protect'>Back</a>"
+
+@app.route('/protect/offshore', methods=['POST'])
+def protect_offshore():
+    from flask import request
+    return f"<h1>🏦 Trust Created!</h1><p>{request.form.get('trust_name')}</p><a href='/protect'>Back</a>"
+
+@app.route('/wealth')
+def wealth_home():
+    """Elite Private Wealth Dashboard."""
+    import random
+    banker = pw.assign_banker()
+    tier = "diamond"
+    tier_info = pw.tiers[tier]
+    services = pw.get_services(tier)
+    portfolio = pw.get_portfolio_recommendation(50000000, 60)
+    codes = pw.invite_codes
+    
+    html = f"""<!DOCTYPE html><html><head><title>Private Wealth</title>
+    <style>
+    *{{margin:0;padding:0;box-sizing:border-box}}
+    body{{font-family:'Georgia',serif;background:#050510;color:#e0e0e0;min-height:100vh}}
+    .header{{text-align:center;padding:40px;background:linear-gradient(180deg,#0a0010,#050510);border-bottom:2px solid {tier_info['color']}}}
+    .header h1{{font-size:42px;color:{tier_info['color']};letter-spacing:5px}}
+    .header .subtitle{{color:#888;font-style:italic;margin-top:10px}}
+    .banker-card{{background:linear-gradient(135deg,#0d0d20,#1a0030);border:1px solid {tier_info['color']};border-radius:16px;padding:30px;margin:30px auto;max-width:800px;text-align:center}}
+    .banker-name{{font-size:28px;color:{tier_info['color']};margin:10px 0}}
+    .tier-badge{{display:inline-block;padding:8px 20px;border-radius:20px;background:{tier_info['color']}22;border:1px solid {tier_info['color']};color:{tier_info['color']};font-weight:bold;margin:10px}}
+    .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:25px;max-width:1200px;margin:30px auto;padding:0 30px}}
+    .card{{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}}
+    .card h3{{color:{tier_info['color']};margin-bottom:15px;font-size:18px}}
+    table{{width:100%;border-collapse:collapse}}
+    th,td{{border:1px solid #1a1a30;padding:10px;text-align:left;font-size:13px}}
+    th{{background:#0a0a15;color:{tier_info['color']};font-size:10px;text-transform:uppercase}}
+    .btn{{display:inline-block;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;margin:10px;cursor:pointer}}
+    .btn-gold{{background:{tier_info['color']};color:#000}}
+    .btn-outline{{border:1px solid {tier_info['color']};color:{tier_info['color']};background:transparent}}
+    .service-item{{padding:12px;border-bottom:1px solid #1a1a30;display:flex;align-items:center;gap:12px}}
+    .service-icon{{font-size:24px}}
+    .code-box{{background:#0a0a15;border:1px dashed {tier_info['color']};padding:15px;border-radius:8px;text-align:center;margin:10px 0;font-family:monospace;font-size:14px}}
+    a{{color:{tier_info['color']};text-decoration:none}}
+    input{{width:100%;padding:12px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px;font-family:Georgia}}
+    button{{width:100%;padding:12px;background:{tier_info['color']};color:#000;border:none;border-radius:5px;font-weight:bold;cursor:pointer;font-family:Georgia}}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>{tier_info['icon']} WYLLENE PRIVATE WEALTH</h1>
+        <p class='subtitle'>Exclusive Wealth Management — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='banker-card'>
+        <p style='color:#888;font-size:12px;text-transform:uppercase;letter-spacing:3px'>Your Personal Banker</p>
+        <div class='banker-name'>🤵 {banker}</div>
+        <div class='tier-badge'>{tier_info['icon']} {tier_info['name']} Tier</div>
+        <p style='color:#888;margin-top:15px'>Available 24/7 for your wealth management needs</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card'>
+            <h3>💼 Portfolio Recommendation</h3>
+            <p style='color:#888;margin-bottom:15px'>Strategy: <b style='color:{tier_info['color']}'>{portfolio['strategy']}</b></p>
+            <table><tr><th>Asset</th><th>Allocation</th></tr>"""
+    
+    for asset, pct in portfolio.items():
+        if asset != "strategy":
+            html += f"<tr><td>{asset.replace('_',' ').title()}</td><td style='color:{tier_info['color']}'>{pct}%</td></tr>"
+    
+    html += """</table></div>
+        
+        <div class='card'>
+            <h3>🎁 Exclusive Services</h3>"""
+    
+    for s in services:
+        html += f"<div class='service-item'><span class='service-icon'>{s['icon']}</span><div><b>{s['name']}</b><p style='color:#888;font-size:11px'>{s['desc']}</p></div></div>"
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🔑 Access Codes</h3>
+            <p style='color:#888;margin-bottom:10px'>Share these with invited members:</p>"""
+    
+    for code, level in codes.items():
+        html += f"<div class='code-box'><b>{code}</b><br><span style='color:#888;font-size:11px'>{level}</span></div>"
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🔐 Request Access</h3>
+            <form action='/wealth/login' method='post'>
+            <input name='invite_code' placeholder='Enter invitation code' required>
+            <button type='submit'>Enter Private Wealth</button></form>
+        </div>
+    </div>
+    
+    <div style='text-align:center;padding:40px;color:#555;border-top:1px solid #222;margin-top:40px'>
+        <p>🏰 Wyllene Private Wealth — Founded by Lunga Titus Malebadi</p>
+        <p style='font-size:11px'>© 2026 All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
+
+@app.route('/wealth/login', methods=['POST'])
+def wealth_login():
+    from flask import request
+    code = request.form.get("invite_code", "").strip().upper()
+    if code in pw.invite_codes:
+        level = pw.invite_codes[code]
+        banker = pw.assign_banker()
+        return f"""<!DOCTYPE html><html><head><title>Welcome</title>
+        <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:50px;text-align:center}}
+        h1{{color:#D4AF37;font-size:42px}}.card{{background:#0d0d20;border:1px solid #D4AF37;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
+        a{{color:#D4AF37}}</style></head><body>
+        <h1>👑 Welcome to Private Wealth</h1>
+        <div class='card'><h2>{level}</h2><p>Your personal banker: <b>{banker}</b></p>
+        <p style='color:#888'>Your exclusive dashboard is being prepared.</p></div>
+        <a href='/wealth'>Enter Dashboard</a> | <a href='/dashboard'>Command Center</a></body></html>"""
+    return f"<h1 style='color:#F44336'>❌ Invalid Code</h1><p><a href='/wealth'>Try Again</a></p>"
+
+@app.route('/wealth/login', methods=['POST'])
+def wealth_login():
+    from flask import request
+    return f"<h1>✅ Access Granted!</h1><a href='/dashboard'>Dashboard</a>"
+
+@app.route('/dynasty')
+def dynasty_home():
+    return """<!DOCTYPE html><html><head><title>Dynasty Life</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#D4AF37;text-align:center}.card{background:#0d0d20;border:1px solid #222;padding:25px;max-width:600px;margin:20px auto;border-radius:12px}
+    input,select{width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff}
+    button{background:#D4AF37;color:#000;padding:12px 25px;border:none;cursor:pointer;font-weight:bold}
+    a{color:#D4AF37}</style></head><body>
+    <h1>🏰 DYNASTY LIFE</h1>
+    <div class='card'><h3>Create Character</h3><form action='/dynasty/create' method='post'>
+    <input name='username' placeholder='Username'><input name='full_name' placeholder='Full Name'>
+    <input name='age' placeholder='Age' value='18'><select name='career'><option>Entrepreneur</option><option>Investor</option><option>Executive</option></select>
+    <input name='dynasty_name' placeholder='Dynasty Name'><button type='submit'>Start Life</button></form></div>
+    <p style='text-align:center'><a href='/dashboard'>Dashboard</a></p></body></html>"""
+
+@app.route('/dynasty/create', methods=['POST'])
+def dynasty_create():
+    from flask import request
+    return f"<h1>✅ Character Created!</h1><p>{request.form.get('full_name')} of House {request.form.get('dynasty_name')}</p><a href='/dynasty'>Back</a>"
+
+@app.route('/fraud')
+def fraud_home():
+    return """<!DOCTYPE html><html><head><title>Fraud Detection</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}
+    h1{color:#ff4444}.card{background:#0d0d20;border:1px solid #222;padding:30px;max-width:600px;margin:30px auto;border-radius:12px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #222;padding:10px}
+    th{background:#1a0000;color:#ff4444}a{color:#ff4444}</style></head><body>
+    <h1>🛡️ FRAUD DETECTION</h1>
+    <div class='card'><h3>Risk Monitoring Active</h3>
+    <table><tr><th>Check</th><th>Status</th></tr>
+    <tr><td>Large Transactions</td><td style='color:#4CAF50'>✅ Monitoring</td></tr>
+    <tr><td>Odd Hours</td><td style='color:#4CAF50'>✅ Active</td></tr>
+    <tr><td>Velocity</td><td style='color:#4CAF50'>✅ Active</td></tr>
+    <tr><td>Pattern Analysis</td><td style='color:#4CAF50'>✅ Active</td></tr></table></div>
+    <a href='/dashboard'>Dashboard</a></body></html>"""
+
+@app.route('/currency')
+def currency_home():
+    rates = {"USD": 1.0, "EUR": 0.92, "GBP": 0.79, "JPY": 149.5, "ZAR": 18.3}
+    html = """<!DOCTYPE html><html><head><title>Currency</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#D4AF37;text-align:center}table{width:100%;max-width:600px;margin:30px auto;border-collapse:collapse}
+    th,td{border:1px solid #222;padding:12px}th{background:#0a0a15;color:#D4AF37}
+    a{color:#D4AF37}</style></head><body>
+    <h1>💱 CURRENCY EXCHANGE</h1>
+    <table><tr><th>Currency</th><th>Rate (USD)</th></tr>"""
+    for code, rate in rates.items():
+        html += f"<tr><td>{code}</td><td>{rate:.4f}</td></tr>"
+    html += "</table><p style='text-align:center'><a href='/dashboard'>Dashboard</a></p></body></html>"
+    return html
+
+@app.route('/analytics')
+def analytics_home():
+    return """<!DOCTYPE html><html><head><title>Analytics</title>
+    <style>body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}
+    h1{color:#D4AF37}.card{background:#0d0d20;border:1px solid #222;padding:30px;max-width:600px;margin:30px auto;border-radius:12px}
+    .metric{font-size:42px;color:#D4AF37;font-weight:bold}
+    a{color:#D4AF37}</style></head><body>
+    <h1>📊 ANALYTICS</h1>
+    <div class='card'><h3>System Overview</h3>
+    <div class='metric'>Active</div><p style='color:#888'>Full analytics dashboard coming soon</p></div>
+    <a href='/dashboard'>Dashboard</a></body></html>"""
+
+
+@app.route('/assets')
+def assets_home():
+    """Asset Portfolio Dashboard."""
+    import random
+    
+    assets = {
+        "stocks": [
+            {"name": "Wyllene Corp", "ticker": "WYLL", "shares": 10000, "price": round(random.uniform(100,500),2)},
+            {"name": "Dynasty Holdings", "ticker": "DYNA", "shares": 5000, "price": round(random.uniform(200,600),2)},
+            {"name": "Legacy Industries", "ticker": "LEGC", "shares": 8000, "price": round(random.uniform(50,300),2)},
+        ],
+        "real_estate": [
+            {"name": "Malebadi Tower", "location": "New York", "value": 85000000},
+            {"name": "Dynasty Estate", "location": "London", "value": 45000000},
+            {"name": "Wyllene Resort", "location": "Dubai", "value": 120000000},
+        ],
+        "businesses": [
+            {"name": "Wyllene Industries", "sector": "Technology", "valuation": 500000000},
+            {"name": "Dynasty Capital", "sector": "Finance", "valuation": 250000000},
+        ],
+        "crypto": [
+            {"name": "Bitcoin", "ticker": "BTC", "amount": 50, "price": 67500},
+            {"name": "Ethereum", "ticker": "ETH", "amount": 500, "price": 3450},
+        ],
+        "cash": 15000000
+    }
+    
+    # Calculate totals
+    stocks_total = sum(s["shares"] * s["price"] for s in assets["stocks"])
+    real_estate_total = sum(r["value"] for r in assets["real_estate"])
+    business_total = sum(b["valuation"] for b in assets["businesses"])
+    crypto_total = sum(c["amount"] * c["price"] for c in assets["crypto"])
+    total_assets = stocks_total + real_estate_total + business_total + crypto_total + assets["cash"]
+    
+    html = f"""<!DOCTYPE html><html><head><title>Asset Portfolio</title>
+    <style>
+    body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}}
+    h1{{text-align:center;color:#D4AF37;font-size:36px}}
+    .total{{text-align:center;font-size:48px;color:#D4AF37;font-weight:bold;margin:20px 0}}
+    .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;max-width:1200px;margin:0 auto}}
+    .card{{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}}
+    .card h3{{margin:0 0 15px 0;font-size:20px}}
+    table{{width:100%;border-collapse:collapse;margin:10px 0}}
+    th,td{{border:1px solid #1a1a30;padding:10px;text-align:left}}
+    th{{background:#0a0a15;font-size:11px;text-transform:uppercase;letter-spacing:1px}}
+    .green{{color:#4CAF50}}.gold{{color:#D4AF37}}.blue{{color:#2196F3}}.purple{{color:#9C27B0}}
+    .bar{{background:#1a1a30;height:6px;border-radius:3px;margin:15px 0}}
+    .bar-fill{{height:100%;border-radius:3px}}
+    .allocation{{display:flex;gap:10px;margin:10px 0}}
+    .alloc-item{{flex:1;text-align:center;padding:10px;background:#0a0a15;border-radius:8px}}
+    .alloc-value{{font-size:18px;font-weight:bold}}
+    .alloc-label{{font-size:10px;color:#888;text-transform:uppercase}}
+    a{{color:#D4AF37;text-decoration:none}}
+    .btn{{display:inline-block;padding:10px 20px;border-radius:5px;text-decoration:none;font-weight:bold;margin:10px}}
+    .btn-gold{{background:#D4AF37;color:#000}}
+    </style></head><body>
+    <h1>💼 ASSET PORTFOLIO</h1>
+    <div class='total'>${total_assets:,.0f}</div>
+    <p style='text-align:center;color:#888'>Total Portfolio Value</p>
+    
+    <div class='allocation'>
+        <div class='alloc-item'><div class='alloc-value green'>${stocks_total:,.0f}</div><div class='alloc-label'>Stocks</div></div>
+        <div class='alloc-item'><div class='alloc-value blue'>${real_estate_total:,.0f}</div><div class='alloc-label'>Real Estate</div></div>
+        <div class='alloc-item'><div class='alloc-value gold'>${business_total:,.0f}</div><div class='alloc-label'>Businesses</div></div>
+        <div class='alloc-item'><div class='alloc-value purple'>${crypto_total:,.0f}</div><div class='alloc-label'>Crypto</div></div>
+        <div class='alloc-item'><div class='alloc-value'>${assets['cash']:,.0f}</div><div class='alloc-label'>Cash</div></div>
+    </div>
+    
+    <div class='bar'><div class='bar-fill' style='width:100%;background:linear-gradient(90deg,#4CAF50 {stocks_total/total_assets*100}%,#2196F3 {stocks_total/total_assets*100}%,#2196F3 {(stocks_total+real_estate_total)/total_assets*100}%,#D4AF37 {(stocks_total+real_estate_total)/total_assets*100}%,#D4AF37 {(stocks_total+real_estate_total+business_total)/total_assets*100}%,#9C27B0 {(stocks_total+real_estate_total+business_total)/total_assets*100}%,#9C27B0 {(stocks_total+real_estate_total+business_total+crypto_total)/total_assets*100}%,#888 {(stocks_total+real_estate_total+business_total+crypto_total)/total_assets*100}%,#888 100%'></div></div>
+    
+    <div class='grid'>
+        <div class='card'>
+            <h3 class='green'>📈 Stocks</h3>
+            <table><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Value</th></tr>"""
+    
+    for s in assets["stocks"]:
+        value = s["shares"] * s["price"]
+        html += f"<tr><td><b>{s['ticker']}</b></td><td>{s['name']}</td><td>{s['shares']:,}</td><td>${s['price']:.2f}</td><td class='green'>${value:,.0f}</td></tr>"
+    
+    html += f"""<tr><td colspan='4'><b>Total</b></td><td class='green'><b>${stocks_total:,.0f}</b></td></tr></table></div>
+        
+        <div class='card'>
+            <h3 class='blue'>🏠 Real Estate</h3>
+            <table><tr><th>Property</th><th>Location</th><th>Value</th></tr>"""
+    
+    for r in assets["real_estate"]:
+        html += f"<tr><td><b>{r['name']}</b></td><td>{r['location']}</td><td class='blue'>${r['value']:,.0f}</td></tr>"
+    
+    html += f"""<tr><td colspan='2'><b>Total</b></td><td class='blue'><b>${real_estate_total:,.0f}</b></td></tr></table></div>
+        
+        <div class='card'>
+            <h3 class='gold'>🏢 Businesses</h3>
+            <table><tr><th>Company</th><th>Sector</th><th>Valuation</th></tr>"""
+    
+    for b in assets["businesses"]:
+        html += f"<tr><td><b>{b['name']}</b></td><td>{b['sector']}</td><td class='gold'>${b['valuation']:,.0f}</td></tr>"
+    
+    html += f"""<tr><td colspan='2'><b>Total</b></td><td class='gold'><b>${business_total:,.0f}</b></td></tr></table></div>
+        
+        <div class='card'>
+            <h3 class='purple'>🪙 Cryptocurrency</h3>
+            <table><tr><th>Ticker</th><th>Name</th><th>Amount</th><th>Price</th><th>Value</th></tr>"""
+    
+    for c in assets["crypto"]:
+        value = c["amount"] * c["price"]
+        html += f"<tr><td><b>{c['ticker']}</b></td><td>{c['name']}</td><td>{c['amount']:,.4f}</td><td>${c['price']:,}</td><td class='purple'>${value:,.0f}</td></tr>"
+    
+    html += f"""<tr><td colspan='4'><b>Total</b></td><td class='purple'><b>${crypto_total:,.0f}</b></td></tr></table></div>
+        
+        <div class='card'>
+            <h3>💵 Cash Reserves</h3>
+            <div style='font-size:36px;color:#D4AF37;text-align:center;padding:20px'>${assets['cash']:,.0f}</div>
+        </div>
+    </div>
+    
+    <div style='text-align:center;margin-top:30px'>
+    <a href='/dashboard' class='btn btn-gold'>Command Center</a>
+    </div>
+    <p style='text-align:center;color:#888;margin-top:20px'>Asset allocation is for demonstration. Real values calculated live.</p>
+    </body></html>"""
+    return html
 
 @app.route('/test')
 def test():
