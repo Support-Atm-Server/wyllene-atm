@@ -13,6 +13,7 @@ from asset_protection import protection
 from family_legacy import family
 import market_economy
 from advanced_features import advanced
+from dna_legacy import dna
 
 app = Flask(__name__)
 
@@ -251,6 +252,129 @@ def art_patronage():
     <h2>{result['name']}</h2>
     <p>{result['message']}</p>
     <a href='/exclusive'>Back</a></body></html>"""
+    return html
+
+
+@app.route('/dna')
+def dna_hub():
+    """DNA Legacy Hub."""
+    bloodlines = dna.get_all_bloodlines()
+    
+    html = """<!DOCTYPE html><html><head><title>Wyllene DNA Legacy</title>
+    <style>
+    body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#D4AF37;text-align:center;font-size:36px}
+    .subtitle{text-align:center;color:#888;font-style:italic}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:25px;max-width:1200px;margin:30px auto}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card h3{color:#D4AF37;margin-bottom:15px}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #222;padding:10px}
+    th{background:#0a0a15;color:#D4AF37}
+    .stat{display:inline-block;width:80px;text-align:center;margin:5px}
+    .stat-value{font-size:24px;color:#D4AF37;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase}
+    .bar{background:#1a1a30;height:10px;border-radius:5px;margin:5px 0}
+    .bar-fill{background:linear-gradient(90deg,#D4AF37,#F4D03F);height:100%;border-radius:5px}
+    .talent-genius{color:#FFD700}.talent-prodigy{color:#00FFFF}.talent-savant{color:#FF00FF}
+    .talent-gifted{color:#00FF00}.talent-normal{color:#AAA}
+    .mutation{color:#FF4444;font-weight:bold}
+    a{color:#D4AF37;text-decoration:none;margin:0 10px}
+    </style></head><body>
+    <h1>🧬 DNA LEGACY SYSTEM</h1>
+    <p class="subtitle">Bloodlines. Traits. Mutations. Legacy.</p>
+    
+    <div class="grid">
+        <div class="card">
+            <h3>🩸 Bloodlines</h3>
+            <table><tr><th>Bloodline</th><th>Founder</th><th>Members</th><th>Avg IQ</th></tr>"""
+    
+    for b in bloodlines[:5]:
+        html += f"<tr><td><b>{b['name']}</b></td><td>{b['founder']}</td><td>{b.get('total_members',1)}</td><td>{b.get('avg_intelligence',50):.0f}</td></tr>"
+    
+    html += """</table></div>
+        <div class="card">
+            <h3>🧬 Generate DNA</h3>
+            <p>Create a DNA profile for your character.</p>
+            <form action='/dna/generate' method='post'>
+            <input name='username' placeholder='Username' style='width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff'>
+            <input name='bloodline' placeholder='Bloodline name (optional)' style='width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff'>
+            <button type='submit' style='background:#D4AF37;color:#000;padding:10px 25px;border:none;cursor:pointer;font-weight:bold'>Generate DNA</button></form>
+        </div>
+        <div class="card">
+            <h3>🔍 View DNA</h3>
+            <form action='/dna/view' method='get'>
+            <input name='username' placeholder='Username' style='width:100%;padding:10px;margin:10px 0;background:#0a0a0a;border:1px solid #333;color:#fff'>
+            <button type='submit' style='background:#D4AF37;color:#000;padding:10px 25px;border:none;cursor:pointer;font-weight:bold'>View Profile</button></form>
+        </div>
+    </div>
+    <p style='text-align:center'><a href='/dashboard'>Command Center</a> | <a href='/exclusive'>S-Tier Features</a></p>
+    </body></html>"""
+    return html
+
+@app.route('/dna/generate', methods=['POST'])
+def dna_generate():
+    from flask import request
+    username = request.form.get("username")
+    bloodline = request.form.get("bloodline") or None
+    result = dna.generate_dna(username, bloodline)
+    
+    html = f"""<!DOCTYPE html><html><head><title>DNA Generated</title>
+    <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}}
+    h1{{color:#D4AF37}}.card{{background:#0d0d20;border:1px solid #222;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
+    .stat{{display:inline-block;width:100px;margin:10px}}.stat-value{{font-size:28px;color:#D4AF37;font-weight:bold}}
+    .stat-label{{font-size:10px;color:#888}}.talent{{font-size:24px;margin:20px 0}}
+    .bar{{background:#1a1a30;height:8px;width:200px;margin:5px auto;border-radius:5px}}
+    .bar-fill{{background:linear-gradient(90deg,#D4AF37,#F4D03F);height:100%;border-radius:5px}}
+    .mutation{{color:#FF4444;font-weight:bold;margin:15px 0}}
+    a{{color:#D4AF37}}</style></head><body>
+    <h1>🧬 DNA PROFILE GENERATED</h1>
+    <div class='card'>
+    <h2>{username}</h2>
+    <p>Bloodline: <b>{result['bloodline']}</b></p>
+    <div class='stat'><div class='stat-value'>{result['intelligence']}</div><div class='stat-label'>Intelligence</div><div class='bar'><div class='bar-fill' style='width:{result['intelligence']}%'></div></div></div>
+    <div class='stat'><div class='stat-value'>{result['charisma']}</div><div class='stat-label'>Charisma</div><div class='bar'><div class='bar-fill' style='width:{result['charisma']}%'></div></div></div>
+    <div class='stat'><div class='stat-value'>{result['business_acumen']}</div><div class='stat-label'>Business</div><div class='bar'><div class='bar-fill' style='width:{result['business_acumen']}%'></div></div></div>
+    <div class='stat'><div class='stat-value'>{result['risk_tolerance']}</div><div class='stat-label'>Risk</div><div class='bar'><div class='bar-fill' style='width:{result['risk_tolerance']}%'></div></div></div>
+    <div class='stat'><div class='stat-value'>{result['longevity']}</div><div class='stat-label'>Longevity</div><div class='bar'><div class='bar-fill' style='width:{result['longevity']}%'></div></div></div>
+    <div class='talent'>Talent: <b>{result['talent']}</b></div>"""
+    
+    if result['mutated']:
+        html += f"<div class='mutation'>🧬 MUTATION: {result['mutation']}!</div>"
+    
+    html += """</div><a href='/dna'>Back</a></body></html>"""
+    return html
+
+@app.route('/dna/view')
+def dna_view():
+    from flask import request
+    username = request.args.get("username")
+    profile = dna.get_dna(username)
+    if not profile:
+        return "<h1>Not found</h1><a href='/dna'>Back</a>"
+    
+    html = f"""<!DOCTYPE html><html><head><title>{username} DNA</title>
+    <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}}
+    h1{{color:#D4AF37}}.card{{background:#0d0d20;border:1px solid #222;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
+    .stat{{display:inline-block;width:100px;margin:10px}}.stat-value{{font-size:28px;color:#D4AF37;font-weight:bold}}
+    .stat-label{{font-size:10px;color:#888}}
+    .bar{{background:#1a1a30;height:8px;width:200px;margin:5px auto;border-radius:5px}}
+    .bar-fill{{background:linear-gradient(90deg,#D4AF37,#F4D03F);height:100%;border-radius:5px}}
+    .mutation{{color:#FF4444}}a{{color:#D4AF37}}</style></head><body>
+    <h1>🧬 {username}'s DNA</h1>
+    <div class='card'>
+    <p>Bloodline: <b>{profile['bloodline']}</b></p>
+    <p>Talent: <b>{profile['talent']}</b></p>
+    <p>Generation: {profile['generation']}</p>"""
+    
+    for trait in ['intelligence','charisma','business_acumen','risk_tolerance','longevity']:
+        val = profile[trait]
+        html += f"<div class='stat'><div class='stat-value'>{val}</div><div class='stat-label'>{trait.replace('_',' ').title()}</div><div class='bar'><div class='bar-fill' style='width:{val}%'></div></div></div>"
+    
+    if profile['mutated']:
+        html += "<p class='mutation'>🧬 This character has a genetic mutation!</p>"
+    
+    html += "</div><a href='/dna'>Back</a></body></html>"
     return html
 
 @app.route('/exclusive/succession')
