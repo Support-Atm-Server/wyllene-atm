@@ -279,6 +279,93 @@ def start_socket():
 
 # ----- Main -----
 
+@app.route('/market')
+def market_home():
+    """Market & Economy Dashboard."""
+    market = economy.get_market_state()
+    stocks = economy.get_stock_prices()
+    leaderboard = economy.update_leaderboard()
+    events = economy.trigger_economic_event()
+    
+    html = """<!DOCTYPE html><html><head><title>Wyllene Markets</title>
+    <style>
+    body{font-family:Georgia;background:#0a0a0a;color:#fff;margin:0;padding:20px}
+    .header{text-align:center;padding:30px;background:linear-gradient(135deg,#001a00,#000a00);border-bottom:2px solid #00ff00}
+    h1{color:#00ff00;font-size:40px}
+    .ticker{background:#1a1a1a;padding:15px;text-align:center;border-bottom:1px solid #333;overflow:hidden;white-space:nowrap}
+    .ticker span{margin:0 30px;color:gold}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;max-width:1200px;margin:30px auto}
+    .card{background:#1a1a1a;border:1px solid #333;padding:25px;border-radius:10px}
+    .card h3{margin-top:0}
+    .up{color:#00ff00}.down{color:#ff4444}
+    .btn{background:#00ff00;color:#000;padding:12px 25px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;margin:5px}
+    input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:10px}
+    </style></head><body>
+    <div class="header"><h1>📈 WYLLENE MARKETS</h1><p>""" + f"Market: {market['market']} | Growth: {market['growth']*100:+.1f}% | Volatility: {market['volatility']}" + """</p></div>
+    <div class="ticker">"""
+    
+    for s in stocks[:8]:
+        color = "up" if random.random() > 0.4 else "down"
+        html += f"<span class='{color}'>{s['ticker']} ${s['price']:.2f}</span>"
+    
+    html += """</div>
+    <div class="grid">
+    <div class="card"><h3>🚀 IPO Company</h3>
+    <form action="/market/ipo" method="post">
+    <input name="founder" placeholder="Your username">
+    <input name="business" placeholder="Business name">
+    <input name="ticker" placeholder="Ticker (e.g., AAPL)">
+    <select name="sector"><option>Tech</option><option>Finance</option><option>Healthcare</option><option>Energy</option><option>Real Estate</option></select>
+    <input name="price" placeholder="Share price ($)">
+    <input name="shares" placeholder="Total shares">
+    <button type="submit" class="btn">Go Public! 🚀</button></form></div>
+    
+    <div class="card"><h3>📈 Buy Stocks</h3>
+    <form action="/market/buy" method="post">
+    <input name="username" placeholder="Your username">
+    <input name="ticker" placeholder="Stock ticker">
+    <input name="shares" placeholder="Number of shares">
+    <button type="submit" class="btn">Buy Shares 📈</button></form></div>
+    
+    <div class="card"><h3>📊 Stock Prices</h3>
+    <table>"""
+    
+    for s in stocks:
+        html += f"<tr><td>{s['ticker']}</td><td>{s['name']}</td><td>${s['price']:.2f}</td><td>{s['sector']}</td></tr>"
+    
+    html += """</table></div>
+    
+    <div class="card"><h3>🏆 Dynasty Leaderboard</h3>
+    <table><tr><th>Rank</th><th>Dynasty</th><th>Wealth</th><th>Members</th><th>Score</th></tr>"""
+    
+    for i, d in enumerate(leaderboard[:10]):
+        html += f"<tr><td>{i+1}</td><td>{d['dynasty']}</td><td>${d['wealth']:,.0f}</td><td>{d['members']}</td><td>{d['score']:,}</td></tr>"
+    
+    html += """</table></div>
+    
+    <div class="card"><h3>📰 Economic News</h3>"""
+    
+    html += f"<p><b>{events['name']}:</b> {events['desc']} (Impact: {events['impact']}, Sectors: {events['sectors']})</p>"
+    
+    html += """</div></div></body></html>"""
+    return html
+
+@app.route('/market/ipo', methods=['POST'])
+def market_ipo():
+    from flask import request
+    result = economy.ipo_company(request.form.get("founder"), request.form.get("business"),
+                                  request.form.get("ticker"), request.form.get("sector"),
+                                  float(request.form.get("price", 0)), int(request.form.get("shares", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
+
+@app.route('/market/buy', methods=['POST'])
+def market_buy():
+    from flask import request
+    result = economy.buy_stocks(request.form.get("username"), request.form.get("ticker"),
+                                 int(request.form.get("shares", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/market'>Back</a>"
+
 @app.route('/family')
 def family_home():
     """Family & Heirs Dashboard."""
