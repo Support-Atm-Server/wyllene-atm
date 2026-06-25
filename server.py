@@ -71,6 +71,7 @@ def backup_create():
     from system_health import health_system
 from private_wealth import wealth as pw
 from family_office import family_office
+from early_adopter import early_adopter
 
 @app.route('/health')
 def health_check():
@@ -314,6 +315,112 @@ def wealth_login():
         return f"<h1 style='color:#D4AF37'>✅ Welcome — {codes[code]}</h1><a href='/wealth'>Enter</a>"
     return "<h1 style='color:#F44336'>❌ Invalid Code</h1><a href='/wealth'>Try Again</a>"
 
+
+
+@app.route('/early-adopter')
+def early_adopter_hub():
+    """Early Adopter Elite Dashboard."""
+    perks = early_adopter.get_perks()
+    badges = early_adopter.get_badges()
+    roadmap = early_adopter.get_roadmap()
+    founders = early_adopter.get_founding_members()
+    card = early_adopter.generate_early_adopter_card("Lunga Titus Malebadi", "June 2026")
+    
+    html = """<!DOCTYPE html><html><head><title>Early Adopter</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Georgia',serif;background:#050510;color:#e0e0e0;min-height:100vh}
+    .header{text-align:center;padding:40px;background:linear-gradient(180deg,#1a0010,#050510);border-bottom:2px solid #D4AF37}
+    .header h1{font-size:42px;color:#D4AF37;letter-spacing:5px}
+    .header .subtitle{color:#888;font-style:italic;margin-top:10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:25px;max-width:1400px;margin:30px auto;padding:0 30px}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card:hover{border-color:#D4AF37}
+    .card h3{color:#D4AF37;margin-bottom:15px;font-size:18px}
+    .gold-card{background:linear-gradient(135deg,#0d0d20,#1a1000);border:2px solid #D4AF37;grid-column:1/-1}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+    .stat-box{text-align:center;padding:20px;background:#0a0a15;border-radius:8px}
+    .stat-value{font-size:28px;color:#D4AF37;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+    .perk-item{display:flex;align-items:center;gap:15px;padding:12px;border-bottom:1px solid #1a1a30}
+    .perk-icon{font-size:28px;width:50px;text-align:center}
+    .badge{display:inline-block;padding:5px 12px;border-radius:15px;font-size:11px;font-weight:bold;margin:3px}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #1a1a30;padding:10px;text-align:left;font-size:13px}
+    th{background:#0a0a15;color:#D4AF37;font-size:10px;text-transform:uppercase}
+    .early-access{color:#4CAF50;font-weight:bold}
+    .roadmap-status{display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:bold}
+    .in-dev{background:#2196F3;color:#fff}.planning{background:#FF9800;color:#000}.research{background:#9C27B0;color:#fff}.concept{background:#888;color:#fff}
+    a{color:#D4AF37;text-decoration:none}
+    .btn{display:inline-block;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;margin:10px}
+    .btn-gold{background:#D4AF37;color:#000}
+    .founder-list{list-style:none;padding:0}
+    .founder-list li{padding:8px 0;font-size:14px;color:#D4AF37}
+    .founder-list li:before{content:'👑 '}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>🥇 EARLY ADOPTER ELITE</h1>
+        <p class='subtitle'>Because you were here first — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card gold-card'>
+            <h3>👑 Your Early Adopter Card</h3>
+            <div class='stat-grid'>
+                <div class='stat-box'><div class='stat-value'>#""" + str(card['member_number']) + """</div><div class='stat-label'>Member Number</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + card['join_date'] + """</div><div class='stat-label'>Member Since</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(card['revenue_share']) + """%</div><div class='stat-label'>Revenue Share</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(card['features_tested']) + """</div><div class='stat-label'>Features Tested</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(card['votes_cast']) + """</div><div class='stat-label'>Votes Cast</div></div>
+                <div class='stat-box'><div class='stat-value'><span class='badge' style='background:""" + card['badge']['color'] + """22;color:""" + card['badge']['color'] + """'>""" + card['badge']['icon'] + """ """ + card['badge']['name'] + """</span></div><div class='stat-label'>Badge</div></div>
+            </div>
+        </div>
+        
+        <div class='card'>
+            <h3>🎁 Exclusive Perks</h3>"""
+    
+    for p in perks:
+        html += f"""<div class='perk-item'><div class='perk-icon'>{p['icon']}</div><div><b>{p['name']}</b><p style='color:#888;font-size:11px'>{p['desc']}</p></div></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🏅 Available Badges</h3>"""
+    
+    for b in badges:
+        html += f"""<span class='badge' style='background:{b['color']}22;color:{b['color']}'>{b['icon']} {b['name']}</span> """
+    
+    html += """<p style='color:#888;margin-top:10px;font-size:11px'>Badges are displayed on your profile and dynasty page</p></div>
+        
+        <div class='card'>
+            <h3>🗺️ Product Roadmap</h3>
+            <table><tr><th>Feature</th><th>ETA</th><th>Status</th><th>Early Access</th></tr>"""
+    
+    for r in roadmap:
+        status_class = "in-dev" if "Development" in r['status'] else "planning" if "Planning" in r['status'] else "research" if "Research" in r['status'] else "concept"
+        html += f"<tr><td>{r['feature']}</td><td>{r['eta']}</td><td><span class='roadmap-status {status_class}'>{r['status']}</span></td><td>{'✅ <span class="early-access">Yes</span>' if r['early_access'] else '🔒 Coming'}</td></tr>"
+    
+    html += """</table></div>
+        
+        <div class='card'>
+            <h3>👑 Founding Members</h3>
+            <ul class='founder-list'>"""
+    
+    for f in founders:
+        html += f"<li>{f}</li>"
+    
+    html += """</ul>
+        </div>
+    </div>
+    
+    <div style='text-align:center;padding:40px;color:#555;border-top:1px solid #222;margin-top:40px'>
+        <p>🥇 Wyllene Early Adopter Program — Founded by Lunga Titus Malebadi</p>
+        <p style='font-size:11px'>© 2026 All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
 
 @app.route('/family-office')
 def family_office_hub():
