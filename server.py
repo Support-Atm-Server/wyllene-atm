@@ -72,6 +72,7 @@ def backup_create():
 from private_wealth import wealth as pw
 from family_office import family_office
 from early_adopter import early_adopter
+from wealth_2024 import wealth_2024
 
 @app.route('/health')
 def health_check():
@@ -316,6 +317,109 @@ def wealth_login():
     return "<h1 style='color:#F44336'>❌ Invalid Code</h1><a href='/wealth'>Try Again</a>"
 
 
+
+
+@app.route('/wealth-2024')
+def wealth_2024_hub():
+    """WEALTH-2024 Founding Year Dashboard."""
+    benefits = wealth_2024.get_benefits()
+    founders = wealth_2024.get_founders()
+    milestones = wealth_2024.get_milestones()
+    stats = wealth_2024.get_stats()
+    card = wealth_2024.generate_wealth_2024_card("Lunga Titus Malebadi")
+    
+    html = """<!DOCTYPE html><html><head><title>WEALTH-2024</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Georgia',serif;background:#050510;color:#e0e0e0;min-height:100vh}
+    .header{text-align:center;padding:40px;background:linear-gradient(180deg,#001a1a,#050510);border-bottom:2px solid #00BCD4}
+    .header h1{font-size:42px;color:#00BCD4;letter-spacing:5px}
+    .header .subtitle{color:#888;font-style:italic;margin-top:10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:25px;max-width:1400px;margin:30px auto;padding:0 30px}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card:hover{border-color:#00BCD4}
+    .card h3{color:#00BCD4;margin-bottom:15px;font-size:18px}
+    .gold-card{background:linear-gradient(135deg,#0d0d20,#001a1a);border:2px solid #00BCD4;grid-column:1/-1}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px}
+    .stat-box{text-align:center;padding:20px;background:#0a0a15;border-radius:8px}
+    .stat-value{font-size:28px;color:#00BCD4;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+    .perk-item{display:flex;align-items:center;gap:15px;padding:12px;border-bottom:1px solid #1a1a30}
+    .perk-icon{font-size:28px;width:50px;text-align:center}
+    .timeline{position:relative;padding-left:30px}
+    .timeline-item{position:relative;padding:15px 0;border-left:2px solid #00BCD4;padding-left:20px;margin-left:10px}
+    .timeline-item:before{content:'';position:absolute;left:-6px;top:20px;width:12px;height:12px;background:#00BCD4;border-radius:50%}
+    .timeline-year{color:#00BCD4;font-weight:bold;font-size:14px}
+    .founder-item{display:flex;align-items:center;gap:15px;padding:15px;background:#0a0a15;border-radius:8px;margin:10px 0}
+    .founder-avatar{width:50px;height:50px;background:#00BCD4;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #1a1a30;padding:10px;text-align:left;font-size:13px}
+    th{background:#0a0a15;color:#00BCD4;font-size:10px;text-transform:uppercase}
+    a{color:#00BCD4;text-decoration:none}
+    .btn{display:inline-block;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;margin:10px}
+    .btn-teal{background:#00BCD4;color:#000}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>💎 WEALTH-2024</h1>
+        <p class='subtitle'>Founding Year Members — The Originals — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card gold-card'>
+            <h3>💎 Your WEALTH-2024 Card</h3>
+            <div class='stat-grid'>
+                <div class='stat-box'><div class='stat-value'>""" + card['badge'] + """</div><div class='stat-label'>Badge</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + card['status'] + """</div><div class='stat-label'>Status</div></div>
+                <div class='stat-box'><div class='stat-value'>$""" + f"{card['dividend_earned']:,}" + """</div><div class='stat-label'>Dividends Earned</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(card['features_tested']) + """</div><div class='stat-label'>Features Tested</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(card['referrals']) + """</div><div class='stat-label'>Referrals</div></div>
+                <div class='stat-box'><div class='stat-value'>""" + str(stats['days_since_founding']) + """</div><div class='stat-label'>Days Since Founding</div></div>
+            </div>
+        </div>
+        
+        <div class='card'>
+            <h3>🎁 Exclusive Benefits</h3>"""
+    
+    for b in benefits:
+        html += f"""<div class='perk-item'><div class='perk-icon'>{b['icon']}</div><div><b>{b['name']}</b><p style='color:#888;font-size:11px'>{b['desc']}</p></div></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>📅 Platform Milestones</h3>
+            <div class='timeline'>"""
+    
+    for m in milestones:
+        html += f"""<div class='timeline-item'><span class='timeline-year'>{m['year']}</span><br>{m['icon']} {m['event']}</div>"""
+    
+    html += """</div></div>
+        
+        <div class='card'>
+            <h3>👑 Hall of Founders</h3>"""
+    
+    for f in founders:
+        html += f"""<div class='founder-item'><div class='founder-avatar'>👑</div><div><b style='color:#00BCD4'>{f['name']}</b><p style='color:#888;font-size:11px'>{f['role']} | {f['contribution']}</p></div></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>📊 Platform Stats</h3>
+            <table><tr><th>Metric</th><th>Value</th></tr>"""
+    
+    for key, val in stats.items():
+        html += f"<tr><td>{key.replace('_',' ').title()}</td><td style='color:#00BCD4'>{val}</td></tr>"
+    
+    html += """</table></div>
+    </div>
+    
+    <div style='text-align:center;padding:40px;color:#555;border-top:1px solid #222;margin-top:40px'>
+        <p>💎 WEALTH-2024 — The Originals — Founded by Lunga Titus Malebadi</p>
+        <p style='font-size:11px'>© 2024-2026 All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
 
 @app.route('/early-adopter')
 def early_adopter_hub():
