@@ -74,6 +74,7 @@ from family_office import family_office
 from early_adopter import early_adopter
 from wealth_2024 import wealth_2024
 from dynasty_elite import dynasty_elite
+from chairman_circle import chairman_circle
 
 @app.route('/health')
 def health_check():
@@ -320,6 +321,107 @@ def wealth_login():
 
 
 
+
+
+@app.route('/chairman-circle')
+def chairman_circle_hub():
+    """CHAIRMAN-CIRCLE — The Pinnacle Tier."""
+    chairman = chairman_circle.get_chairman()
+    privileges = chairman_circle.get_privileges()
+    quarters = chairman_circle.get_quarters()
+    duties = chairman_circle.get_duties()
+    legacy = chairman_circle.get_legacy()
+    
+    html = """<!DOCTYPE html><html><head><title>CHAIRMAN-CIRCLE</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Georgia',serif;background:#000000;color:#e0e0e0;min-height:100vh}
+    .header{text-align:center;padding:50px;background:linear-gradient(180deg,#1a0000,#000000);border-bottom:3px solid #FFD700}
+    .header h1{font-size:48px;background:linear-gradient(135deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:8px}
+    .header .subtitle{color:#888;font-style:italic;margin-top:15px;font-size:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:25px;max-width:1500px;margin:30px auto;padding:0 30px}
+    .card{background:#0a0a0a;border:1px solid #222;border-radius:12px;padding:30px}
+    .card:hover{border-color:#FFD700}
+    .card h3{color:#FFD700;margin-bottom:15px;font-size:20px}
+    .chairman-card{background:linear-gradient(135deg,#0a0a0a,#1a0000);border:3px solid #FFD700;grid-column:1/-1;text-align:center;padding:50px}
+    .sigil{font-size:80px;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+    .chairman-name{font-size:36px;background:linear-gradient(135deg,#FFD700,#FFA500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:bold;margin:20px 0}
+    .chairman-title{color:#FFD700;font-size:18px;letter-spacing:3px}
+    .quote{font-style:italic;color:#aaa;font-size:16px;max-width:600px;margin:20px auto;line-height:1.8}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}
+    .stat-box{text-align:center;padding:25px;background:#000;border:1px solid #333;border-radius:8px}
+    .stat-value{font-size:32px;color:#FFD700;font-weight:bold}
+    .stat-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;margin-top:5px}
+    .privilege-item{display:flex;align-items:center;gap:20px;padding:15px;border-bottom:1px solid #1a1a1a}
+    .privilege-icon{font-size:32px;width:50px;text-align:center}
+    .duty-item{padding:12px 0;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;gap:10px}
+    .duty-item:before{content:'◆';color:#FFD700}
+    .legacy-card{background:#000;border:1px solid #FFD700;padding:20px;border-radius:8px;margin:10px 0}
+    .legacy-status{display:inline-block;padding:3px 12px;border-radius:10px;font-size:10px;font-weight:bold}
+    .active{background:#4CAF50;color:#000}.planning{background:#FF9800;color:#000}.concept{background:#2196F3;color:#fff}
+    a{color:#FFD700;text-decoration:none}
+    .btn{display:inline-block;padding:15px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:15px;font-size:16px}
+    .btn-gold{background:linear-gradient(135deg,#FFD700,#FFA500);color:#000}
+    </style></head><body>
+    
+    <div class='header'>
+        <h1>👑 CHAIRMAN-CIRCLE</h1>
+        <p class='subtitle'>The Pinnacle — Founded by Lunga Titus Malebadi</p>
+    </div>
+    
+    <div class='grid'>
+        <div class='card chairman-card'>
+            <div class='sigil'>""" + chairman['sigil'] + """</div>
+            <div class='chairman-name'>""" + chairman['name'] + """</div>
+            <div class='chairman-title'>""" + chairman['title'] + """</div>
+            <div class='quote'>"""" + chairman['quote'] + """"</div>
+            <p style='color:#888'>Member since """ + chairman['joined'] + """</p>
+        </div>
+        
+        <div class='card'>
+            <h3>⚡ Chairman Privileges</h3>"""
+    
+    for p in privileges:
+        html += f"""<div class='privilege-item'><div class='privilege-icon'>{p['icon']}</div><div><b style='color:#FFD700'>{p['name']}</b><p style='color:#888;font-size:11px'>{p['desc']}</p></div></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>📋 Chairman Duties</h3>"""
+    
+    for d in duties:
+        html += f"""<div class='duty-item'><span>{d}</span></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🏢 Chairman's Quarters</h3>"""
+    
+    for q in quarters:
+        html += f"""<div class='legacy-card'><b style='color:#FFD700'>{q['name']}</b><p style='color:#888'>{q['location']}</p><p style='color:#aaa;font-size:12px'>{q['purpose']}</p></div>"""
+    
+    html += """</div>
+        
+        <div class='card'>
+            <h3>🏛️ Legacy Projects</h3>"""
+    
+    for l in legacy:
+        status_class = "active" if l['status'] == "Active" else "planning" if l['status'] == "Planning" else "concept"
+        html += f"""<div class='legacy-card'><b style='color:#FFD700'>{l['name']}</b> <span class='legacy-status {status_class}'>{l['status']}</span>
+        <p style='color:#888'>Completion: {l['completion']}</p><p style='color:#aaa;font-size:12px'>{l['desc']}</p></div>"""
+    
+    html += """</div>
+    </div>
+    
+    <div style='text-align:center;padding:50px;color:#555;border-top:2px solid #FFD700;margin-top:40px'>
+        <p style='color:#FFD700;font-size:18px'>👑 CHAIRMAN-CIRCLE — The Pinnacle</p>
+        <p style='font-size:12px'>Founded by Lunga Titus Malebadi — Chairman & CEO</p>
+        <p style='font-size:10px'>© 2026 Wyllene Dynasty Corporation — All Rights Reserved</p>
+    </div>
+    
+    </body></html>"""
+    return html
 
 @app.route('/dynasty-elite')
 def dynasty_elite_hub():
