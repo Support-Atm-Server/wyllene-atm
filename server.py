@@ -16,6 +16,7 @@ from advanced_features import advanced
 from dna_legacy import dna
 from ai_rivals import ai_rivals
 from time_travel import time_travel
+from geopolitics import geopolitics
 
 app = Flask(__name__)
 
@@ -514,6 +515,106 @@ def timetravel_hub():
     html += """</div>
     <p style='text-align:center;margin-top:30px'><a href='/dashboard'>Command Center</a> | <a href='/exclusive'>S-Tier</a></p>
     </body></html>"""
+    return html
+
+
+@app.route('/geopolitics')
+def geopolitics_hub():
+    """Geopolitical Influence Hub."""
+    event = geopolitics.generate_world_event()
+    actions = geopolitics.political_actions
+    
+    html = """<!DOCTYPE html><html><head><title>Geopolitics</title>
+    <style>
+    body{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px}
+    h1{color:#D4AF37;text-align:center;font-size:36px}
+    .subtitle{text-align:center;color:#888;font-style:italic;margin-bottom:30px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;max-width:1200px;margin:0 auto}
+    .card{background:#0d0d20;border:1px solid #222;border-radius:12px;padding:25px}
+    .card h3{color:#D4AF37;margin-bottom:15px}
+    .world-event{background:#1a0000;border:2px solid #FF4444;border-radius:12px;padding:25px;margin:20px 0;text-align:center}
+    .world-event h2{color:#FF4444;margin:0}
+    .impact{font-size:28px;font-weight:bold;margin:10px 0}
+    table{width:100%;border-collapse:collapse;margin:10px 0}
+    th,td{border:1px solid #222;padding:10px}
+    th{background:#0a0a15;color:#D4AF37}
+    .btn{display:inline-block;padding:10px 20px;border-radius:5px;text-decoration:none;font-weight:bold;margin:5px;cursor:pointer}
+    .btn-red{background:#FF4444;color:#000}
+    .btn-gold{background:#D4AF37;color:#000}
+    .btn-outline{border:1px solid #D4AF37;color:#D4AF37}
+    a{color:#D4AF37;text-decoration:none}
+    </style></head><body>
+    <h1>🌍 GEOPOLITICAL INFLUENCE</h1>
+    <p class='subtitle'>Shape world events. Control governments. Dominate globally.</p>
+    
+    <div class='world-event'>
+        <h2>📰 BREAKING WORLD EVENT</h2>
+        <h3>""" + event['name'] + """</h3>
+        <p>""" + event['desc'] + """</p>
+        <div class='impact' style='color:""" + ('#4CAF50' if event['market'] > 0 else '#F44336') + """'>Market Impact: """ + f"{event['market']*100:+.0f}%" + """</div>
+        <p>Regions: """ + event['regions'] + """</p>
+        <a href='/geopolitics/newevent' class='btn btn-red'>🔄 New Event</a>
+    </div>
+    
+    <h2>🏛️ Political Actions</h2>
+    <div class='grid'>"""
+    
+    for a in actions:
+        html += f"""
+        <div class='card'>
+            <h3>{a['action']}</h3>
+            <p>{a['desc']}</p>
+            <p>Cost: <b>${a['cost']:,}</b></p>
+            <p>Influence: <b>+{a['influence']}</b></p>
+            <a href='/geopolitics/action?action={a['action']}&dynasty=Malebadi&wealth=10000000' class='btn btn-gold'>Execute</a>
+        </div>"""
+    
+    html += """</div>
+    <p style='text-align:center;margin-top:30px'><a href='/dashboard'>Command Center</a> | <a href='/exclusive'>S-Tier</a></p>
+    </body></html>"""
+    return html
+
+@app.route('/geopolitics/newevent')
+def geopolitics_new_event():
+    event = geopolitics.generate_world_event()
+    color = "#4CAF50" if event['market'] > 0 else "#F44336"
+    
+    html = f"""<!DOCTYPE html><html><head><title>World Event</title>
+    <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}}
+    h1{{color:#FF4444}}.card{{background:#1a0000;border:2px solid #FF4444;padding:30px;max-width:600px;margin:30px auto;border-radius:12px}}
+    .impact{{font-size:32px;color:{color}}}a{{color:#D4AF37}}</style></head><body>
+    <h1>📰 WORLD EVENT</h1>
+    <div class='card'>
+    <h2>{event['name']}</h2><p>{event['desc']}</p>
+    <div class='impact'>Market: {event['market']*100:+.0f}%</div>
+    <p>Regions: {', '.join(event['regions'])}</p></div>
+    <a href='/geopolitics'>Back</a></body></html>"""
+    return html
+
+@app.route('/geopolitics/action')
+def geopolitics_action():
+    from flask import request
+    action_name = request.args.get("action")
+    dynasty = request.args.get("dynasty", "Malebadi")
+    wealth = float(request.args.get("wealth", 10000000))
+    
+    result = geopolitics.perform_political_action(dynasty, action_name, wealth)
+    if not result:
+        return "<h1>Action not found</h1>"
+    
+    html = f"""<!DOCTYPE html><html><head><title>Political Action</title>
+    <style>body{{font-family:Georgia;background:#050510;color:#e0e0e0;padding:30px;text-align:center}}
+    h1{{color:#D4AF37}}.card{{background:#0d0d20;border:1px solid #222;padding:30px;max-width:500px;margin:30px auto;border-radius:12px}}
+    .success{{color:#4CAF50;font-size:24px}}.fail{{color:#FF4444;font-size:24px}}
+    a{{color:#D4AF37}}</style></head><body>
+    <h1>🏛️ POLITICAL ACTION</h1>
+    <div class='card'>
+    <h2>{dynasty} — {result['action']}</h2>
+    <div class='{'success' if result['success'] else 'fail'}'>{result['message']}</div>
+    <p>Cost: ${result['cost']:,}</p>
+    <p>Influence Gained: +{result['influence_gained']}</p>
+    </div>
+    <a href='/geopolitics'>Back</a></body></html>"""
     return html
 
 @app.route('/timetravel/simulate')
