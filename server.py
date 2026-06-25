@@ -279,6 +279,107 @@ def start_socket():
 
 # ----- Main -----
 
+@app.route('/dynasty')
+def dynasty_home():
+    """Dynasty — Generational Wealth Simulator."""
+    return """<!DOCTYPE html><html><head><title>Wyllene Dynasty</title>
+    <style>
+    body{font-family:Georgia;background:#0a0a0a;color:#fff;margin:0;padding:20px}
+    .header{text-align:center;padding:40px;background:linear-gradient(135deg,#1a1a00,#0a0a00);border-bottom:3px solid gold}
+    h1{color:gold;font-size:48px;letter-spacing:5px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:1200px;margin:30px auto}
+    .card{background:#1a1a1a;border:1px solid #333;padding:25px;border-radius:10px}
+    .card h3{color:gold;margin-top:0}
+    .btn{background:gold;color:#0a0a0a;padding:12px 25px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;margin:5px}
+    input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
+    .stat{font-size:28px;color:gold;font-weight:bold}
+    </style></head><body>
+    <div class="header"><h1>🏰 WYLLENE DYNASTY</h1><p>Generational Wealth Engine</p></div>
+    <div class="grid">
+    <div class="card"><h3>Create Character</h3>
+    <form action="/dynasty/create" method="post">
+    <input name="username" placeholder="Username" required>
+    <input name="full_name" placeholder="Full Name" required>
+    <input name="age" placeholder="Age (default 18)" value="18">
+    <select name="education"><option>High School</option><option>Bachelor's</option><option>Master's</option><option>PhD</option></select>
+    <select name="career"><option>Unemployed</option><option>Entry Level</option><option>Professional</option><option>Manager</option><option>Entrepreneur</option></select>
+    <input name="starting_wealth" placeholder="Starting Wealth ($)" value="10000">
+    <input name="dynasty_name" placeholder="Dynasty Name (e.g., Vanderbilt)">
+    <button type="submit" class="btn">Start Life</button></form></div>
+    <div class="card"><h3>View Profile</h3>
+    <form action="/dynasty/profile" method="get">
+    <input name="user" placeholder="Username"><button type="submit" class="btn">View</button></form></div>
+    <div class="card"><h3>Advance Year</h3>
+    <form action="/dynasty/advance" method="post">
+    <input name="username" placeholder="Username"><button type="submit" class="btn">Advance One Year →</button></form></div>
+    <div class="card"><h3>Start Business</h3>
+    <form action="/dynasty/business" method="post">
+    <input name="owner" placeholder="Your username">
+    <input name="name" placeholder="Business name">
+    <input name="sector" placeholder="Sector (Tech, Finance, etc.)">
+    <input name="investment" placeholder="Investment amount ($)">
+    <button type="submit" class="btn">Launch Business</button></form></div>
+    <div class="card"><h3>Create Trust Fund</h3>
+    <form action="/dynasty/trust" method="post">
+    <input name="creator" placeholder="Your username">
+    <input name="beneficiary" placeholder="Beneficiary username">
+    <input name="amount" placeholder="Amount ($)">
+    <input name="unlock_age" placeholder="Unlock age (default 25)" value="25">
+    <button type="submit" class="btn">Create Trust Fund</button></form></div>
+    </div></body></html>"""
+
+@app.route('/dynasty/create', methods=['POST'])
+def dynasty_create():
+    from flask import request
+    result = dynasty.create_character(
+        request.form.get("username"), request.form.get("full_name"),
+        int(request.form.get("age", 18)), request.form.get("education", "High School"),
+        float(request.form.get("starting_wealth", 10000)),
+        request.form.get("dynasty_name", "")
+    )
+    return f"<h1>{'✅ Created!' if result['status']=='ok' else '❌ Error'}</h1><p>{result}</p><a href='/dynasty'>Back</a>"
+
+@app.route('/dynasty/profile')
+def dynasty_profile():
+    from flask import request
+    user = request.args.get("user", "")
+    char = dynasty.get_character(user)
+    if not char: return "Character not found."
+    html = f"<h1 style='color:gold'>👤 {char['full_name']}</h1>"
+    html += f"<p>Age: {char['age']} | Education: {char['education']} | Career: {char['career']}</p>"
+    html += f"<p>Net Worth: ${char.get('total_assets',0):,.2f}</p>"
+    html += f"<p>Dynasty: {char['dynasty_name']} | Generation: {char['generation']}</p>"
+    if char.get("children"):
+        html += "<h3>Children</h3>"
+        for child in char["children"]:
+            html += f"<p>👶 {child['full_name']} (Age {child['age']})</p>"
+    html += "<a href='/dynasty'>Back</a>"
+    return html
+
+@app.route('/dynasty/advance', methods=['POST'])
+def dynasty_advance():
+    from flask import request
+    result = dynasty.advance_year(request.form.get("username"))
+    return f"<h1>⏩ Year Advanced!</h1><p>Age: {result.get('new_age')}</p><p>Net Change: ${result.get('net_change',0):,.2f}</p><a href='/dynasty'>Back</a>"
+
+@app.route('/dynasty/business', methods=['POST'])
+def dynasty_business():
+    from flask import request
+    result = dynasty.start_business(
+        request.form.get("owner"), request.form.get("name"),
+        request.form.get("sector"), float(request.form.get("investment", 0))
+    )
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/dynasty'>Back</a>"
+
+@app.route('/dynasty/trust', methods=['POST'])
+def dynasty_trust():
+    from flask import request
+    result = dynasty.create_trust_fund(
+        request.form.get("creator"), request.form.get("beneficiary"),
+        float(request.form.get("amount", 0)), int(request.form.get("unlock_age", 25))
+    )
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/dynasty'>Back</a>"
+
 @app.route('/wealth')
 def wealth_home():
     """Private Wealth homepage."""
