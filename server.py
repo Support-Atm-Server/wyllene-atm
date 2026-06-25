@@ -279,6 +279,110 @@ def start_socket():
 
 # ----- Main -----
 
+@app.route('/family')
+def family_home():
+    """Family & Heirs Dashboard."""
+    return """<!DOCTYPE html><html><head><title>Wyllene Dynasty — Family</title>
+    <style>
+    body{font-family:Georgia;background:#0a0a0a;color:#fff;margin:0;padding:20px}
+    .header{text-align:center;padding:30px;background:linear-gradient(135deg,#1a001a,#0a000a);border-bottom:2px solid #ff69b4}
+    h1{color:#ff69b4;font-size:40px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;max-width:1200px;margin:30px auto}
+    .card{background:#1a1a1a;border:1px solid #333;padding:25px;border-radius:10px}
+    .card h3{color:#ff69b4;margin-top:0}
+    .btn{background:#ff69b4;color:#fff;padding:12px 25px;border:none;border-radius:5px;font-weight:bold;cursor:pointer;text-decoration:none;display:inline-block;margin:5px}
+    input,select{width:100%;padding:10px;margin:5px 0;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:5px}
+    </style></head><body>
+    <div class="header"><h1>👨‍👩‍👧‍👦 FAMILY & HEIRS</h1><p>Build Your Dynasty</p></div>
+    <div class="grid">
+    <div class="card"><h3>💒 Marry</h3>
+    <form action="/family/marry" method="post">
+    <input name="person1" placeholder="Your username">
+    <input name="person2" placeholder="Spouse username">
+    <input name="prenup" placeholder="Prenup amount (0 for none)">
+    <button type="submit" class="btn">Get Married 💒</button></form></div>
+    
+    <div class="card"><h3>👶 Have a Child</h3>
+    <form action="/family/child" method="post">
+    <input name="parent1" placeholder="Your username">
+    <input name="parent2" placeholder="Spouse username">
+    <input name="name" placeholder="Child's full name">
+    <select name="gender"><option>Random</option><option>Male</option><option>Female</option></select>
+    <button type="submit" class="btn">Welcome Baby 👶</button></form></div>
+    
+    <div class="card"><h3>🎓 Education</h3>
+    <form action="/family/education" method="post">
+    <input name="child" placeholder="Child's username">
+    <select name="institution"><option>Harvard University ($250k)</option><option>Oxford University ($200k)</option><option>MIT ($220k)</option><option>Stanford ($240k)</option><option>Yale ($230k)</option></select>
+    <button type="submit" class="btn">Send to School 🎓</button></form></div>
+    
+    <div class="card"><h3>⚰️ Process Inheritance</h3>
+    <form action="/family/inheritance" method="post">
+    <input name="deceased" placeholder="Deceased username">
+    <button type="submit" class="btn" style="background:#666">Transfer Assets ⚰️</button></form></div>
+    
+    <div class="card"><h3>🌳 Family Tree</h3>
+    <form action="/family/tree" method="get">
+    <input name="user" placeholder="Username">
+    <button type="submit" class="btn">View Tree 🌳</button></form></div>
+    </div></body></html>"""
+
+@app.route('/family/marry', methods=['POST'])
+def family_marry():
+    from flask import request
+    result = family.marry(request.form.get("person1"), request.form.get("person2"),
+                          float(request.form.get("prenup", 0)))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/family'>Back</a>"
+
+@app.route('/family/child', methods=['POST'])
+def family_child():
+    from flask import request
+    gender = request.form.get("gender")
+    if gender == "Random": gender = None
+    result = family.have_child(request.form.get("parent1"), request.form.get("parent2"),
+                                request.form.get("name"), gender)
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/family'>Back</a>"
+
+@app.route('/family/education', methods=['POST'])
+def family_education():
+    from flask import request
+    institution = request.form.get("institution")
+    costs = {"Harvard University ($250k)": 250000, "Oxford University ($200k)": 200000,
+             "MIT ($220k)": 220000, "Stanford ($240k)": 240000, "Yale ($230k)": 230000}
+    cost = costs.get(institution, 200000)
+    degree = institution.split(" (")[0]
+    result = family.send_to_school(request.form.get("child"), degree.split(" University")[0] + " University", "Bachelor's", cost)
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/family'>Back</a>"
+
+@app.route('/family/inheritance', methods=['POST'])
+def family_inheritance():
+    from flask import request
+    result = family.process_inheritance(request.form.get("deceased"))
+    return f"<h1>{'✅' if result['status']=='ok' else '❌'}</h1><p>{result.get('message')}</p><a href='/family'>Back</a>"
+
+@app.route('/family/tree')
+def family_tree():
+    from flask import request
+    user = request.args.get("user", "")
+    tree = family.get_family_tree(user)
+    if not tree:
+        return "Character not found."
+    char = tree["character"]
+    html = f"<h1 style='color:#ff69b4'>🌳 Family Tree: {char['full_name']}</h1>"
+    html += f"<p>Age: {char['age']} | Dynasty: {char['dynasty_name']} | Generation: {char['generation']}</p>"
+    if tree["spouse"]:
+        html += f"<h3>💒 Spouse: {tree['spouse']['full_name']}</h3>"
+    if tree["children"]:
+        html += "<h3>👶 Children:</h3>"
+        for child in tree["children"]:
+            html += f"<p>👤 {child['full_name']} ({child['gender']}) — Born {child['birth_year']}, Talent: {child['talent']}</p>"
+    if tree["parents"]:
+        html += "<h3>👴 Parents:</h3>"
+        for parent in tree["parents"]:
+            html += f"<p>{parent['full_name']}</p>"
+    html += "<a href='/family'>Back</a>"
+    return html
+
 @app.route('/protect')
 def protect_home():
     """Asset Protection Dashboard."""
